@@ -1,0 +1,11 @@
+Retried 8 failed URLs
+Recovered: 0
+Not recovered:
+- http://file.lacounty.gov/SDSInter/dhs/1154455_EMSPlanCompleteBinderFY21-22.pdf :: HTTP Error 404: Not Found
+- https://file.lacounty.gov/SDSInter/dhs/1004352_1309-ColorCodeDrugDosesLACountyKids11-01-2016.pdf :: HTTP Error 404: Not Found
+- https://file.lacounty.gov/SDSInter/dhs/1058376_401.1AmbulanceOperators06242019CP.pdf :: HTTP Error 404: Not Found
+- https://file.lacounty.gov/SDSInter/dhs/1112224_EMSAgencyQIPlan.pdf :: HTTP Error 404: Not Found
+- https://file.lacounty.gov/SDSInter/dhs/206289_62001-01-16.pdf :: HTTP Error 404: Not Found
+- https://file.lacounty.gov/dhs/cms1_206228.pdf :: HTTP Error 404: Not Found
+- https://file.lacounty.gov/dhs/cms1_206543.pdf :: HTTP Error 404: Not Found
+- https://file.lacounty.gov/dhs/cms1_206657.pdf :: HTTP Error 404: Not Found

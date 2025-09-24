@@ -1,0 +1,551 @@
+[
+  {
+    "pi_name": "Abdominal Pain/Problems",
+    "pi_code": "ABOP",
+    "tp_name": "GI/GU Emergencies",
+    "tp_code": "1205",
+    "tp_code_pediatric": "1205-P",
+    "guidelines": "For any pain or problem in the abdominal/flank region that does not have a more specific PI, includes post-surgical complications.",
+    "keywords": ["abdominal", "pain", "stomach", "belly", "flank", "GI", "GU", "gastrointestinal", "genitourinary"]
+  },
+  {
+    "pi_name": "Airway Obstruction/Choking",
+    "pi_code": "CHOK",
+    "tp_name": "Airway Obstruction",
+    "tp_code": "1234",
+    "tp_code_pediatric": "1234-P",
+    "guidelines": "For any upper airway emergency including choking, foreign body, swelling, stridor, croup, and obstructed tracheostomy"
+  },
+  {
+    "pi_name": "Alcohol Intoxication",
+    "pi_code": "ETOH",
+    "tp_name": "Overdose/Poisoning/Ingestion",
+    "tp_code": "1241",
+    "tp_code_pediatric": "1241-P",
+    "guidelines": "For alcohol intoxication if it is the primary problem. Use of secondary PI if the patient has another acute emergency."
+  },
+  {
+    "pi_name": "Allergic Reaction",
+    "pi_code": "ALRX",
+    "tp_name": "Allergy",
+    "tp_code": "1219",
+    "tp_code_pediatric": "1219-P",
+    "guidelines": "For any simple allergic reaction that is isolated to the skin (hives/urticarial only) and does not meet definition of anaphylaxis"
+  },
+  {
+    "pi_name": "ALOC - Not Hypoglycemia or Seizure",
+    "pi_code": "ALOC",
+    "tp_name": "ALOC",
+    "tp_code": "1229",
+    "tp_code_pediatric": "1229-P",
+    "guidelines": "For altered mental status not attributed to a more specific PI (i.e., cause unknown). Use as secondary PI when cause known."
+  },
+  {
+    "pi_name": "Anaphylaxis",
+    "pi_code": "ANPH",
+    "tp_name": "Allergy",
+    "tp_code": "1219",
+    "tp_code_pediatric": "1219-P",
+    "guidelines": "For anaphylaxis."
+  },
+  {
+    "pi_name": "Behavioral/Psychiatric Crisis",
+    "pi_code": "PSYC",
+    "tp_name": "Behavioral/Psychiatric Crisis",
+    "tp_code": "1209",
+    "tp_code_pediatric": "1209-P",
+    "guidelines": "For psychiatric crisis that is the primary problem. NOT for anxiety/agitation secondary to medical etiology – use PI related to medical issue."
+  },
+  {
+    "pi_name": "Body Pain - Non Traumatic",
+    "pi_code": "BPNT",
+    "tp_name": "General Medical",
+    "tp_code": "1202",
+    "tp_code_pediatric": "1202-P",
+    "guidelines": "For pain not related to trauma that is not localized to chest, abdomen, head, or extremity."
+  },
+  {
+    "pi_name": "BRUE",
+    "pi_code": "BRUE",
+    "tp_name": "BRUE",
+    "tp_code": "1235-P",
+    "tp_code_pediatric": "1235-P",
+    "guidelines": "For a brief resolved unexplained event (BRUE). Patient must be ≤12 months of age and back to baseline on assessment."
+  },
+  {
+    "pi_name": "Burns",
+    "pi_code": "BURN",
+    "tp_name": "Burns",
+    "tp_code": "1220",
+    "tp_code_pediatric": "1220-P",
+    "guidelines": "For any burn injury to skin. For inhalation injury use PI Inhalation Injury. Use with PI Traumatic Injury if other trauma present."
+  },
+  {
+    "pi_name": "Carbon Monoxide",
+    "pi_code": "COMO",
+    "tp_name": "Carbon Monoxide Exposure",
+    "tp_code": "1238",
+    "tp_code_pediatric": "1238-P",
+    "guidelines": "For suspected or known carbon monoxide exposure."
+  },
+  {
+    "pi_name": "Cardiac Arrest - Non-traumatic",
+    "pi_code": "CANT",
+    "tp_name": "Cardiac Arrest",
+    "tp_code": "1210",
+    "tp_code_pediatric": "1210-P",
+    "guidelines": "For non-traumatic cardiac arrest in which any resuscitation is initiated, NOT dead on arrival.",
+    "keywords": ["cardiac arrest", "CPR", "resuscitation", "pulseless", "unresponsive", "code"]
+  },
+  {
+    "pi_name": "Cardiac Dysrhythmia - Bradycardia",
+    "pi_code": "DYSR",
+    "tp_name": "Cardiac Dysrhythmia - Bradycardia",
+    "tp_code": "1212",
+    "tp_code_pediatric": "1212-P",
+    "guidelines": "For any bradycardic rhythm <60bpm."
+  },
+  {
+    "pi_name": "Cardiac Dysrhythmia - Tachycardia",
+    "pi_code": "DYSR",
+    "tp_name": "Cardiac Dysrhythmia - Tachycardia",
+    "tp_code": "1213",
+    "tp_code_pediatric": "1213-P",
+    "guidelines": "For any tachydysrhythmia and for sinus tachycardia (ST) of unclear etiology. NOT for ST secondary to known cause – use more specific PI (e.g., Fever)"
+  },
+  {
+    "pi_name": "Chest Pain - Not Cardiac",
+    "pi_code": "CPNC",
+    "tp_name": "General Medical",
+    "tp_code": "1202",
+    "tp_code_pediatric": "1202-P",
+    "guidelines": "For musculoskeletal and pleuritic pain and any chest pain that is NOT of possible cardiovascular etiology."
+  },
+  {
+    "pi_name": "Chest Pain - STEMI",
+    "pi_code": "CPMI",
+    "tp_name": "Cardiac Chest Pain",
+    "tp_code": "1211",
+    "tp_code_pediatric": "1211-P",
+    "guidelines": "For any suspected STEMI, with or without chest pain.",
+    "keywords": ["chest pain", "STEMI", "heart attack", "cardiac", "myocardial infarction", "MI"]
+  },
+  {
+    "pi_name": "Chest Pain - Suspected Cardiac",
+    "pi_code": "CPSC",
+    "tp_name": "Cardiac Chest Pain",
+    "tp_code": "1211",
+    "tp_code_pediatric": "1211-P",
+    "guidelines": "For any chest pain/symptom that is of possible cardiovascular etiology but NOT STEMI (e.g., NSTEMI, pericarditis, dissection)."
+  },
+  {
+    "pi_name": "Childbirth (Mother)",
+    "pi_code": "BRTH",
+    "tp_name": "Childbirth (Mother)",
+    "tp_code": "1215",
+    "tp_code_pediatric": "1215-P",
+    "guidelines": "For delivery or imminent delivery of a fetus beyond the first trimester (12 weeks). For <12 weeks use PI Pregnancy Complications."
+  },
+  {
+    "pi_name": "Cold / Flu Symptoms",
+    "pi_code": "COFL",
+    "tp_name": "General Medical",
+    "tp_code": "1202",
+    "tp_code_pediatric": "1202-P",
+    "guidelines": "For minor respiratory illness in a patient without shortness of breath or wheezing; must have normal respiratory rate and O2 sat (if available)."
+  },
+  {
+    "pi_name": "Diarrhea",
+    "pi_code": "DRHA",
+    "tp_name": "GI/GU Emergencies",
+    "tp_code": "1205",
+    "tp_code_pediatric": "1205-P",
+    "guidelines": "For diarrhea without bleeding. NOT for melena, use PI Upper GI Bleeding."
+  },
+  {
+    "pi_name": "Dizziness/Vertigo",
+    "pi_code": "DIZZ",
+    "tp_name": "Dizziness/Vertigo",
+    "tp_code": "1230",
+    "tp_code_pediatric": "1230-P",
+    "guidelines": "For lightheadedness or vertigo, without syncope."
+  },
+  {
+    "pi_name": "DOA - Obvious Death",
+    "pi_code": "DEAD",
+    "tp_name": "Cardiac Arrest",
+    "tp_code": "1210",
+    "tp_code_pediatric": "1210-P",
+    "guidelines": "For non-traumatic cardiac arrest found dead on arrival such that no resuscitation is initiated."
+  },
+  {
+    "pi_name": "Dystonic Reaction",
+    "pi_code": "DYRX",
+    "tp_name": "Dystonic Reaction",
+    "tp_code": "1239",
+    "tp_code_pediatric": "1239-P",
+    "guidelines": "For suspected dystonic reaction (i.e., reaction, typically from antipsychotic medications, causing abnormal contraction of head and neck muscles.)"
+  },
+  {
+    "pi_name": "Electrocution",
+    "pi_code": "ELCT",
+    "tp_name": "Electrocution",
+    "tp_code": "1221",
+    "tp_code_pediatric": "1221-P",
+    "guidelines": "For any electrocution injury."
+  },
+  {
+    "pi_name": "ENT / Dental Emergencies",
+    "pi_code": "ENTP",
+    "tp_name": "ENT / Dental Emergencies",
+    "tp_code": "1226",
+    "tp_code_pediatric": "1226-P",
+    "guidelines": "For a problem located in the ear, nose, throat area, except NOT epistaxis – use PI Epistaxis, NOT airway obstruction – use PI Airway Obstruction."
+  },
+  {
+    "pi_name": "Epistaxis",
+    "pi_code": "NOBL",
+    "tp_name": "ENT / Dental Emergencies",
+    "tp_code": "1226",
+    "tp_code_pediatric": "1226-P",
+    "guidelines": "For any bleeding from the nares."
+  },
+  {
+    "pi_name": "Extremity Pain/Swelling - Non-Traumatic",
+    "pi_code": "EXNT",
+    "tp_name": "General Medical",
+    "tp_code": "1202",
+    "tp_code_pediatric": "1202-P",
+    "guidelines": "For pain, swelling, or other non-traumatic problem of an extremity, includes rashes and non-traumatic bleeding (e.g., varicose vein bleed)."
+  },
+  {
+    "pi_name": "Eye Problem - Unspecified",
+    "pi_code": "EYEP",
+    "tp_name": "Eye Problem",
+    "tp_code": "1228",
+    "tp_code_pediatric": "1228-P",
+    "guidelines": "For any pain or problem of the eye or periorbital region, use with PI Traumatic Injury if a traumatic mechanism."
+  },
+  {
+    "pi_name": "Fever",
+    "pi_code": "FEVR",
+    "tp_name": "Fever",
+    "tp_code": "1204",
+    "tp_code_pediatric": "1204-P",
+    "guidelines": "For reported or tactile fever that is NOT suspected sepsis. For sepsis use PI Sepsis."
+  },
+  {
+    "pi_name": "Genitourinary Disorder - Unspecified",
+    "pi_code": "GUDO",
+    "tp_name": "GI/GU Emergencies",
+    "tp_code": "1205",
+    "tp_code_pediatric": "1205-P",
+    "guidelines": "For urinary or genital related complaints, or for sexual assault, except NOT vaginal bleeding – use PI Vaginal Bleeding, NOT trauma-related – use PI Traumatic Injury."
+  },
+  {
+    "pi_name": "HazMat Exposure",
+    "pi_code": "DCON",
+    "tp_name": "HAZMAT",
+    "tp_code": "1240",
+    "tp_code_pediatric": "1240-P",
+    "guidelines": "For any hazardous material (chemical) exposure. May use with another PI (e.g., Inhalation Injury or Burns) when applicable."
+  },
+  {
+    "pi_name": "Headache - Non-Traumatic",
+    "pi_code": "HPNT",
+    "tp_name": "General Medical",
+    "tp_code": "1202",
+    "tp_code_pediatric": "1202-P",
+    "guidelines": "For non-traumatic headache or head pain."
+  },
+  {
+    "pi_name": "Hyperglycemia",
+    "pi_code": "HYPR",
+    "tp_name": "Diabetic Emergencies",
+    "tp_code": "1203",
+    "tp_code_pediatric": "1203-P",
+    "guidelines": "For patients with primary concern for hyperglycemia and/or associated symptoms (blurred vision, frequent urination or thirst) without more specific PI and those requiring field treatment. DO NOT list for incidental finding of hyperglycemia related to another illness."
+  },
+  {
+    "pi_name": "Hypertension",
+    "pi_code": "HYTN",
+    "tp_name": "General Medical",
+    "tp_code": "1202",
+    "tp_code_pediatric": "1202-P",
+    "guidelines": "For patients with primary concern for hypertension without symptoms related to a more specific PI. For symptomatic patients, use related PI as primary (e.g., Headache – Non-traumatic) and Hypertension as secondary. DO NOT list for incidental finding of hypertension."
+  },
+  {
+    "pi_name": "Hyperthermia",
+    "pi_code": "HEAT",
+    "tp_name": "Hyperthermia (Environmental)",
+    "tp_code": "1222",
+    "tp_code_pediatric": "1222-P",
+    "guidelines": "For environmental exposure causing hyperthermia, e.g., heat exhaustion and heat stroke, drugs may also be a contributing factor."
+  },
+  {
+    "pi_name": "Hypoglycemia",
+    "pi_code": "HYPO",
+    "tp_name": "Diabetic Emergencies",
+    "tp_code": "1203",
+    "tp_code_pediatric": "1203-P",
+    "guidelines": "For glucose <60mg/dL."
+  },
+  {
+    "pi_name": "Hypotension",
+    "pi_code": "HOTN",
+    "tp_name": "Shock / Hypotension",
+    "tp_code": "1207",
+    "tp_code_pediatric": "1207-P",
+    "guidelines": "For SBP <90mmHg in adults or below normal for size per 1309 in children with transient low BP or rapidly responds to fluid resuscitation and without signs of shock."
+  },
+  {
+    "pi_name": "Hypothermia / Cold Injury",
+    "pi_code": "COLD",
+    "tp_name": "Hypothermia / Cold Injury",
+    "tp_code": "1223",
+    "tp_code_pediatric": "1223-P",
+    "guidelines": "For environmental exposures causing hypothermia and/or frostbite injury."
+  },
+  {
+    "pi_name": "Inhalation Injury",
+    "pi_code": "INHL",
+    "tp_name": "Inhalation Injury",
+    "tp_code": "1236",
+    "tp_code_pediatric": "1236-P",
+    "guidelines": "For any signs/symptoms related to inhaling a gas or substance other than smoke or carbon monoxide."
+  },
+  {
+    "pi_name": "Lower GI Bleeding",
+    "pi_code": "LOGI",
+    "tp_name": "GI/GU Emergencies",
+    "tp_code": "1205",
+    "tp_code_pediatric": "1205-P",
+    "guidelines": "For bleeding from the rectum and/or bright red bloody stools."
+  },
+  {
+    "pi_name": "Medical Device Malfunction - Fail",
+    "pi_code": "FAIL",
+    "tp_name": "Medical Device Malfunction",
+    "tp_code": "1206",
+    "tp_code_pediatric": "1206-P",
+    "guidelines": "For a medical device that fails, including VADs, insulin pumps, and shunts. Usually for internal devices, may be used for vent failure if patient is asymptomatic. For symptomatic patients, use PI related to symptoms (e.g., Automated Internal Defibrillator firing – use PI associated with complaint such as Cardiac Dysrhythmia – Tachycardia)."
+  },
+  {
+    "pi_name": "Nausea / Vomiting",
+    "pi_code": "NAVM",
+    "tp_name": "GI/GU Emergencies",
+    "tp_code": "1205",
+    "tp_code_pediatric": "1205-P",
+    "guidelines": "For any nausea or vomiting without blood. Not for adverse reaction to opiate administration by EMS, manage with primary PI/TP."
+  },
+  {
+    "pi_name": "Newborn",
+    "pi_code": "BABY",
+    "tp_name": "Newborn/Neonatal",
+    "tp_code": "1216-P",
+    "tp_code_pediatric": "1216-P",
+    "guidelines": "For any newborn deliveries in the field."
+  },
+  {
+    "pi_name": "No Medical Complaint",
+    "pi_code": "NOMC",
+    "tp_name": "Assessment",
+    "tp_code": "1201",
+    "tp_code_pediatric": "1201",
+    "guidelines": "For patients without any medical, psychiatric or traumatic complaint and no signs of illness on assessment. Usually reserved for non-transports."
+  },
+  {
+    "pi_name": "Overdose/Poisoning/Ingestion",
+    "pi_code": "ODPO",
+    "tp_name": "Overdose/Poisoning/Ingestion",
+    "tp_code": "1241",
+    "tp_code_pediatric": "1241-P",
+    "guidelines": "For any intentional or unintentional overdose/poisoning by any route, includes illicit substances and prescription medications, overdose and/or adverse reactions."
+  },
+  {
+    "pi_name": "Palpitations",
+    "pi_code": "PALP",
+    "tp_name": "General Medical",
+    "tp_code": "1202",
+    "tp_code_pediatric": "1202-P",
+    "guidelines": "For any patient complaint of palpitations (e.g., rapid heart rate beat, skipped beats, chest fluttering) with normal rate and rhythm on the ECG."
+  },
+  {
+    "pi_name": "Pregnancy Complications",
+    "pi_code": "PREG",
+    "tp_name": "Pregnancy Complication",
+    "tp_code": "1217",
+    "tp_code_pediatric": "1217-P",
+    "guidelines": "For any pregnancy-related condition that is not labor. Includes vaginal bleeding in pregnancy, hypertension, and complications of delivery."
+  },
+  {
+    "pi_name": "Pregnancy / Labor",
+    "pi_code": "LABR",
+    "tp_name": "Pregnancy Labor",
+    "tp_code": "1218",
+    "tp_code_pediatric": "1218-P",
+    "guidelines": "For contractions without imminent childbirth."
+  },
+  {
+    "pi_name": "Respiratory Arrest / Failure",
+    "pi_code": "RARF",
+    "tp_name": "Respiratory Distress",
+    "tp_code": "1237",
+    "tp_code_pediatric": "1237-P",
+    "guidelines": "For patients requiring positive-pressure ventilation and/or hypoxia despite 100% oxygen."
+  },
+  {
+    "pi_name": "Respiratory Distress / Bronchospasm",
+    "pi_code": "SOBB",
+    "tp_name": "Respiratory Distress",
+    "tp_code": "1237",
+    "tp_code_pediatric": "1237-P",
+    "guidelines": "For COPD/asthma exacerbations and any bronchospasms/wheezing not from pulmonary edema."
+  },
+  {
+    "pi_name": "Respiratory Distress / Other",
+    "pi_code": "RDOT",
+    "tp_name": "Respiratory Distress",
+    "tp_code": "1237",
+    "tp_code_pediatric": "1237-P",
+    "guidelines": "For patients with pulmonary disease that is not edema or bronchospasm, includes suspected pneumonia, PE, pneumothorax and non-pulmonary and unknown causes of respiratory distress."
+  },
+  {
+    "pi_name": "Respiratory Distress / Pulmonary Edema / CHF",
+    "pi_code": "CHFF",
+    "tp_name": "Pulmonary Edema / CHF",
+    "tp_code": "1214",
+    "tp_code_pediatric": "1214-P",
+    "guidelines": "For congestive heart failure exacerbation."
+  },
+  {
+    "pi_name": "Seizure - Active",
+    "pi_code": "SEAC",
+    "tp_name": "Seizure",
+    "tp_code": "1231",
+    "tp_code_pediatric": "1231-P",
+    "guidelines": "For seizure witnessed by EMS, whether treated or not."
+  },
+  {
+    "pi_name": "Seizure - Postictal",
+    "pi_code": "SEPI",
+    "tp_name": "Seizure",
+    "tp_code": "1231",
+    "tp_code_pediatric": "1231-P",
+    "guidelines": "For any seizure that stopped prior to EMS arrival and there is no further seizure activity during EMS contact."
+  },
+  {
+    "pi_name": "Sepsis",
+    "pi_code": "SEPS",
+    "tp_name": "Fever / Sepsis",
+    "tp_code": "1204",
+    "tp_code_pediatric": "1204-P",
+    "guidelines": "For patients with suspected sepsis (i.e., signs suggestive of sepsis including fever, tachycardia, suspected infection)."
+  },
+  {
+    "pi_name": "Severe Agitation with ALOC",
+    "pi_code": "SAAL",
+    "tp_name": "Behavioral/Psychiatric Crisis",
+    "tp_code": "1209",
+    "tp_code_pediatric": "1209-P",
+    "guidelines": "Severe agitation with altered mental status due to suspected psychiatric and/or substance-related cause that prevents critical EMS clinical evaluation and/or treatment and endangers the patient, EMS clinicians and/or bystanders. NOT for anxiety/agitation secondary to medical etiology – use PI related to medical issue for medical agitation."
+  },
+  {
+    "pi_name": "Shock",
+    "pi_code": "SHOK",
+    "tp_name": "Shock / Hypotension",
+    "tp_code": "1207",
+    "tp_code_pediatric": "1207-P",
+    "guidelines": "For patients with poor perfusion not rapidly responsive to IV fluids."
+  },
+  {
+    "pi_name": "Smoke Inhalation",
+    "pi_code": "SMOK",
+    "tp_name": "Inhalation Injury",
+    "tp_code": "1236",
+    "tp_code_pediatric": "1236-P",
+    "guidelines": "For patients with smoke inhalation."
+  },
+  {
+    "pi_name": "Stings / Venomous Bites",
+    "pi_code": "STNG",
+    "tp_name": "Stings / Venomous Bites",
+    "tp_code": "1224",
+    "tp_code_pediatric": "1224-P",
+    "guidelines": "For snakes, scorpion, insects, and marine envenomations (stingrays, jelly fish). NOT for animal bites, use PI traumatic injury."
+  },
+  {
+    "pi_name": "Stroke / CVA / TIA",
+    "pi_code": "STRK",
+    "tp_name": "Stroke / CVA / TIA",
+    "tp_code": "1232",
+    "tp_code_pediatric": "1232-P",
+    "guidelines": "For suspected stroke or transient ischemic attack (stroke symptoms that resolve rapidly).",
+    "keywords": ["stroke", "CVA", "TIA", "transient ischemic attack", "cerebrovascular", "neurological", "facial droop", "arm weakness", "speech difficulty", "FAST"]
+  },
+  {
+    "pi_name": "Submersion / Drowning",
+    "pi_code": "DRWN",
+    "tp_name": "Submersion",
+    "tp_code": "1225",
+    "tp_code_pediatric": "1225-P",
+    "guidelines": "For any submersion injury, including drowning and dive (decompression) emergencies."
+  },
+  {
+    "pi_name": "Syncope / Near Syncope",
+    "pi_code": "SYNC",
+    "tp_name": "Syncope / Near Syncope",
+    "tp_code": "1233",
+    "tp_code_pediatric": "1233-P",
+    "guidelines": "For syncope (transient loss of consciousness). NOT for cardiac arrest, use PI Cardiac Arrest – Non-traumatic only."
+  },
+  {
+    "pi_name": "Traumatic Arrest - Blunt",
+    "pi_code": "CABT",
+    "tp_name": "Traumatic Arrest",
+    "tp_code": "1243",
+    "tp_code_pediatric": "1243-P",
+    "guidelines": "For cardiac arrest with blunt traumatic mechanism, including those declared deceased in the field by Ref. 814. NOT for trauma sustained after cardiac arrest, use PI Cardiac Arrest – Non-traumatic."
+  },
+  {
+    "pi_name": "Traumatic Arrest - Penetrating",
+    "pi_code": "CAPT",
+    "tp_name": "Traumatic Arrest",
+    "tp_code": "1243",
+    "tp_code_pediatric": "1243-P",
+    "guidelines": "For cardiac arrest with penetrating traumatic mechanism, including those declared deceased in the field by Ref. 814."
+  },
+  {
+    "pi_name": "Traumatic Injury",
+    "pi_code": "TRMA",
+    "tp_name": "Traumatic Injury",
+    "tp_code": "1244",
+    "tp_code_pediatric": "1244-P",
+    "guidelines": "For any trauma-related injury including crush injury and conducted electrical weapons (CEW). May use in addition to another PI when medical condition also present (e.g., for syncope with trauma – use PI Syncope and PI Traumatic Injury; for CEW use in patient with agitation – use PI Behavioral/Psychiatric Crisis or PI Severe Agitation with ALOC as appropriate, and also PI Traumatic Injury).",
+    "keywords": ["trauma", "traumatic injury", "injury", "accident", "crush", "CEW", "conducted electrical weapon", "taser", "blunt", "penetrating"]
+  },
+  {
+    "pi_name": "Upper GI Bleeding",
+    "pi_code": "UPGI",
+    "tp_name": "GI/GU Emergencies",
+    "tp_code": "1205",
+    "tp_code_pediatric": "1205-P",
+    "guidelines": "For vomiting blood or coffee ground emesis, and for melena (i.e., black, tarry stools)."
+  },
+  {
+    "pi_name": "Vaginal Bleeding",
+    "pi_code": "VABL",
+    "tp_name": "GI/GU Emergencies",
+    "tp_code": "1205",
+    "tp_code_pediatric": "1205-P",
+    "guidelines": "For vaginal bleeding in the NON-pregnant patient. For vaginal bleeding in pregnancy use PI Pregnancy Complications."
+  },
+  {
+    "pi_name": "Weakness - General",
+    "pi_code": "WEAK",
+    "tp_name": "General Medical",
+    "tp_code": "1202",
+    "tp_code_pediatric": "1202-P",
+    "guidelines": "For nonfocal weakness, general malaise, and any nonspecific 'sick' symptoms."
+  }
+]
