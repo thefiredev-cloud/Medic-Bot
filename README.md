@@ -42,3 +42,4 @@ A comprehensive EMS protocol assistant for fire and first responders. Local JSON
 ## Important
 This bot is **for educational and reference purposes only** and should not replace proper medical training or official protocol manuals.
 # Medic-Bot
+# Medic-Bot
