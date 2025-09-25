@@ -16,6 +16,7 @@ export type TriageResult = {
   age?: number;
   sex?: "male" | "female" | "unknown";
   pregnant?: boolean;
+  weightKg?: number;
   chiefComplaint?: string;
   painLocation?: string; // e.g., "LUQ", "RUQ", etc.
   vitals: Vitals;
@@ -42,13 +43,34 @@ function parseAge(text: string): number | undefined {
 
 function parseSex(text: string): "male" | "female" | "unknown" {
   const lower = text.toLowerCase();
-  if (/\b(female|woman|lady|girl|f)\b/.test(lower)) return "female";
+  // Handle common misspellings/short forms for female (e.g., "femal", "fml", "fem")
+  if (/\b(female|femal|femae|femail|woman|lady|girl|f|fml|fem)\b/.test(lower)) return "female";
   if (/\b(male|man|guy|boy|m)\b/.test(lower)) return "male";
   return "unknown";
 }
 
 function parsePregnancy(text: string): boolean {
   return /\b(preg|pregnant|gravida|g\d+p\d+)\b/i.test(text);
+}
+
+function parseWeightKg(text: string): number | undefined {
+  const lower = text.toLowerCase();
+  // Match kilograms first
+  const kgMatch = lower.match(/\b(\d{1,3}(?:\.\d+)?)\s*(?:kg|kilograms?)\b/);
+  if (kgMatch) {
+    const kg = parseFloat(kgMatch[1]);
+    return (!isNaN(kg) && kg > 1 && kg < 200) ? kg : undefined;
+  }
+  // Match pounds and convert
+  const lbMatch = lower.match(/\b(\d{1,3}(?:\.\d+)?)\s*(?:lb|lbs|pounds?)\b/);
+  if (lbMatch) {
+    const lbs = parseFloat(lbMatch[1]);
+    if (isNaN(lbs) || lbs <= 2 || lbs >= 440) return undefined;
+    const kg = lbs * 0.45359237;
+    const rounded = Math.round(kg * 10) / 10;
+    return (rounded > 1 && rounded < 200) ? rounded : undefined;
+  }
+  return undefined;
 }
 
 function toNumber(s: string | undefined): number | undefined {
@@ -126,7 +148,7 @@ function normalizeQuadrant(text: string): string | undefined {
 function parseChiefComplaint(text: string): { cc?: string; painLocation?: string } {
   const lower = text.toLowerCase();
   const painLoc = normalizeQuadrant(lower);
-  if (/\babdominal|stomach|belly\b/.test(lower) || painLoc) {
+  if (/\babdominal|abd\b|stomach|belly\b/.test(lower) || painLoc) {
     return { cc: "abdominal pain", painLocation: painLoc };
   }
   if (/\b(chest pain|cp)\b/.test(lower)) return { cc: "chest pain" };
@@ -174,6 +196,7 @@ export function triageInput(text: string): TriageResult {
   const age = parseAge(text);
   const sex = parseSex(text);
   const pregnant = parsePregnancy(text);
+  const weightKg = parseWeightKg(text);
   const vitals = parseVitals(text);
   const { cc, painLocation } = parseChiefComplaint(text);
   const allergies = parseAllergies(text);
@@ -198,6 +221,7 @@ export function triageInput(text: string): TriageResult {
     age,
     sex,
     pregnant,
+    weightKg,
     chiefComplaint: cc,
     painLocation,
     vitals,
@@ -212,6 +236,7 @@ function formatDemographics(result: TriageResult): string[] {
   if (result.age) demo.push(`${result.age}y`);
   if (result.sex && result.sex !== "unknown") demo.push(result.sex);
   if (result.pregnant) demo.push("pregnant");
+  if (typeof result.weightKg === "number") demo.push(`${result.weightKg}kg`);
   if (result.chiefComplaint) demo.push(result.chiefComplaint + (result.painLocation ? ` (${result.painLocation})` : ""));
   return demo;
 }
@@ -219,7 +244,8 @@ function formatDemographics(result: TriageResult): string[] {
 function formatVitals(result: TriageResult): string | undefined {
   const v = result.vitals || {};
   const parts: string[] = [];
-  pushIf(parts, v.systolic && v.diastolic, `BP ${v.systolic}/${v.diastolic}`);
+  const hasBloodPressure = v.systolic !== undefined && v.diastolic !== undefined;
+  pushIf(parts, hasBloodPressure, `BP ${v.systolic}/${v.diastolic}`);
   pushIf(parts, !!v.heartRate, `HR ${v.heartRate}`);
   pushIf(parts, !!v.respiratoryRate, `RR ${v.respiratoryRate}`);
   pushIf(parts, !!v.spo2, `SpO2 ${v.spo2}%`);
@@ -235,7 +261,14 @@ function pushIf(list: string[], condition: boolean, value: string) {
 }
 
 function formatProtocolCandidates(result: TriageResult): string[] {
-  return result.matchedProtocols.slice(0, 3).map(mp => (
+  const seen = new Set<string>();
+  const unique = result.matchedProtocols.filter(mp => {
+    const key = mp.tp_code;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 3);
+  return unique.map(mp => (
     `- ${mp.pi_name} (${mp.pi_code}) → ${mp.tp_name} ${mp.tp_code}${mp.tp_code_pediatric ? "/" + mp.tp_code_pediatric : ""}`
   ));
 }

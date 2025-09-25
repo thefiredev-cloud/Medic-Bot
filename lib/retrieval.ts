@@ -20,6 +20,57 @@ export type KBDoc = {
 
 let index: MiniSearch<KBDoc> | null = null;
 
+function augmentQueryWithSynonyms(originalQuery: string): string {
+  const lower = (originalQuery || "").toLowerCase();
+  const expansions: string[] = [];
+
+  // Medication synonyms
+  const addIf = (regexes: RegExp[], canonical: string) => {
+    if (regexes.some((r) => r.test(lower))) expansions.push(canonical);
+  };
+
+  addIf([
+    /\bsodium\s*bi\s*carb\b/,
+    /\bbicarb\b/,
+    /\bbi\s*carb\b/,
+    /\bnahco3\b/, // chemical name
+  ], "sodium bicarbonate");
+
+  // Clinical contexts that commonly imply bicarbonate use in LA County
+  const mentionsCrush = /\bcrush\b/.test(lower);
+  const mentionsTCA = /\b(tca|tricyclic)\b/.test(lower);
+  const mentionsHyperK = /\b(hyperk|hyperkalemi\w*)\b/.test(lower);
+  const mentionsDialysis = /\bdialysis|renal failure|ckd\b/.test(lower);
+  const peakedT = /\bpeaked\s*t\s*waves?\b/.test(lower);
+
+  if (mentionsCrush) {
+    expansions.push(
+      "crush injury 1242",
+      "crush syndrome",
+      "hyperkalemia",
+      "sodium bicarbonate",
+    );
+  }
+  if (mentionsTCA) {
+    expansions.push(
+      "tricyclic overdose",
+      "qrs widening",
+      "sodium bicarbonate",
+    );
+  }
+  if (mentionsHyperK || mentionsDialysis || peakedT) {
+    expansions.push(
+      "hyperkalemia",
+      "sodium bicarbonate",
+      "cardiac arrest",
+      "bradycardia",
+    );
+  }
+
+  // Return original plus expansions to maximize MiniSearch hits
+  return [originalQuery, ...expansions].join(" ").trim();
+}
+
 function sanitizeTitleFromFilename(filename: string): string {
   return filename
     .replace(/\.[a-zA-Z0-9]+$/i, "")
@@ -205,7 +256,7 @@ function isPCMDoc(d: KBDoc): boolean {
 }
 
 function applyScopeFilter(docs: KBDoc[]): KBDoc[] {
-  const scope = (process.env.KB_SCOPE || "").toLowerCase();
+  const scope = (process.env.KB_SCOPE || "pcm").toLowerCase();
   if (scope === "pcm") {
     return docs.filter(isPCMDoc);
   }
@@ -213,7 +264,7 @@ function applyScopeFilter(docs: KBDoc[]): KBDoc[] {
 }
 
 const KB: KBDoc[] = applyScopeFilter(
-  (process.env.KB_SOURCE || "").toLowerCase() === "clean"
+  (process.env.KB_SOURCE || "clean").toLowerCase() === "clean"
     ? ((ems_kb_clean as unknown) as KBDoc[])
     : deduplicateKB(buildRawKB())
 );
@@ -236,7 +287,8 @@ type SearchHit = { id: string };
 
 export function searchKB(query: string, limit = 6): KBDoc[] {
   if (!index) index = buildIndex();
-  const results = index.search(query, { combineWith: "OR" }).slice(0, limit) as unknown as SearchHit[];
+  const expanded = augmentQueryWithSynonyms(query);
+  const results = index.search(expanded, { combineWith: "OR" }).slice(0, limit) as unknown as SearchHit[];
   const mapped = results.map((r: SearchHit) => KB.find(d => d.id === r.id)).filter(Boolean) as KBDoc[];
   
   // Debug logging (disabled in production)

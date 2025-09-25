@@ -1,216 +1,150 @@
 "use client";
+/* eslint-disable simple-import-sort/imports */
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import { MessageItem } from "./components/sob-protocols";
 import { SpeechRecognitionManager } from "../lib/SpeechRecognitionManager";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-type ProtocolDef = {
-  name: string;
-  description: string;
-  medications: string[];
-  criticalInfo: string[];
+type NarrativeSection = { title: string; lines: string[] };
+type NarrativeDraft = { template: string; sections: NarrativeSection[] };
+type NemsisNarrative = {
+  eTimes?: { unitNotified?: string; unitEnRoute?: string; unitArrived?: string; patientContact?: string; departScene?: string; arriveDest?: string; transfer?: string };
+  eSituation?: { primaryComplaint?: string; providerPrimaryImpression?: string; mechanismOfInjury?: string };
+  eVitals?: Array<{ time?: string; bp?: string; hr?: string; rr?: string; spo2?: string; gcs?: string; temp?: string }>;
+  eMedications?: Array<{ time?: string; name: string; dose?: string; route?: string; response?: string }>;
+  eProcedures?: Array<{ time?: string; name: string; response?: string }>;
+  eDisposition?: { destination?: string; transportMode?: string; condition?: string };
+  baseContact?: { time?: string; hospital?: string; physician?: string; summary?: string };
 };
 
-// SOB Protocol data with medications and critical info
-const SOB_PROTOCOLS: Record<string, ProtocolDef> = {
-  "Airway Obstruction 1231": {
-    name: "Airway Obstruction (1231)",
-    description: "Complete/partial airway obstruction, foreign body, choking, stridor",
-    medications: [
-      "Oxygen 15L/min via non-rebreather - If O2 sat <94%",
-      "Epinephrine 0.5mg IM - For severe allergic reaction"
-    ],
-    criticalInfo: [
-      "For conscious patient: Heimlich maneuver (adults) or back blows and chest thrusts (infants)",
-      "For unconscious patient: Begin CPR, check mouth for visible foreign body",
-      "Do not perform blind finger sweeps",
-      "Base Contact: YES - Severe respiratory distress or arrest"
-    ]
-  },
-  "Respiratory Distress Bronchospasm 1233": {
-    name: "Respiratory Distress - Bronchospasm (1233)",
-    description: "COPD/asthma exacerbation, wheezing, bronchospasm",
-    medications: [
-      "Albuterol 5mg via nebulizer - May repeat q20min",
-      "Epinephrine 0.5mg IM - For severe bronchospasm",
-      "Oxygen 15L/min via non-rebreather - If O2 sat <94%"
-    ],
-    criticalInfo: [
-      "Position patient upright if respiratory status allows",
-      "Consider CPAP if severe respiratory distress",
-      "Base Hospital Contact: Required for severe respiratory distress unresponsive or not amenable to CPAP"
-    ]
-  },
-  "Respiratory Distress Other 1237": {
-    name: "Respiratory Distress - Other (1237)",
-    description: "Bronchospasm, COPD or asthma exacerbation",
-    medications: [
-      "Oxygen 15L/min via non-rebreather - If O2 sat <94%",
-      "Albuterol 5mg (6mL) via nebulizer or 4 puffs via MDI",
-      "  - May repeat x2 prn wheezing",
-      "  - May be administered in-line with CPAP for moderate or severe respiratory distress",
-      "Epinephrine 0.5mg (0.5mL) IM - For deteriorating respiratory status despite albuterol",
-      "  - Consider early in asthma exacerbation with poor perfusion",
-      "  - Unlikely to benefit patients with COPD exacerbation"
-    ],
-    criticalInfo: [
-      "Position patient upright if respiratory status allows",
-      "Document Provider Impression as Respiratory Distress / Bronchospasm",
-      "Consider CPAP if severe respiratory distress",
-      "Base Hospital Contact: Required for severe respiratory distress unresponsive or not amenable to CPAP"
-    ]
-  },
-  "Respiratory Distress Pulmonary Edema 1214": {
-    name: "Respiratory Distress - Pulmonary Edema/CHF (1214)",
-    description: "Congestive heart failure, pulmonary edema",
-    medications: [
-      "Nitroglycerin - For SBP >100 with no sexually enhancing drugs within 48 hours:",
-      "  - 0.4mg SL for SBP ≥ 100mmHg",
-      "  - 0.8mg SL for SBP ≥ 150mmHg",
-      "  - 1.2mg SL for SBP ≥ 200mmHg",
-      "  - Repeat every 3-5min prn x2 for persistent dyspnea",
-      "  - Hold if SBP < 100mmHg",
-      "Oxygen 15L/min via non-rebreather - If O2 sat <94%"
-    ],
-    criticalInfo: [
-      "Position patient upright if respiratory status allows",
-      "Assess blood pressure prior to each nitroglycerin administration",
-      "Consider CPAP if severe respiratory distress",
-      "Base Hospital Contact: Required for severe respiratory distress unresponsive or not amenable to CPAP"
-    ]
-  },
-  "Inhalation Injury 1236": {
-    name: "Inhalation Injury (1236)",
-    description: "Smoke inhalation, chemical exposure",
-    medications: [
-      "Oxygen 15L/min via non-rebreather - If O2 sat <94%",
-      "Epinephrine 0.5mg IM - For severe allergic reaction"
-    ],
-    criticalInfo: [
-      "Remove patient from source of exposure",
-      "Consider decontamination if chemical exposure",
-      "Monitor for delayed respiratory symptoms",
-      "Base Hospital Contact: Required for severe respiratory distress unresponsive or not amenable to CPAP"
-    ]
-  }
+type CarePlan = {
+  protocolCode: string;
+  protocolTitle: string;
+  actions: string[];
+  baseContact: string;
+  basicMedications: string[];
+  criticalNotes: string[];
 };
 
-function isSOBProtocolMessage(content: string) {
-  return content.includes("Select the appropriate respiratory protocol") &&
-    content.includes("Airway Obstruction") &&
-    content.includes("Respiratory Distress");
-}
+type Citation = { title: string; category: string; subcategory: string };
 
-function MessageItem({ m }: { m: Msg }) {
-  if (!isSOBProtocolMessage(m.content)) {
-    return <div style={{ whiteSpace: 'pre-wrap' }}>{m.content}</div>;
-  }
-  return <SOBProtocolGateway />;
-}
+// SOB protocol UI moved to components
 
-function ProtocolDetails({ protocol }: { protocol: ProtocolDef }) {
-  return (
-    <div className="protocol-dropdown" style={{
-      background: 'var(--bg)',
-      border: '1px solid var(--border)',
-      borderRadius: '8px',
-      padding: '16px',
-      marginTop: '8px'
-    }}>
-      <div style={{ marginBottom: '16px' }}>
-        <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>Medications:</h4>
-        <ul style={{ margin: 0, paddingLeft: '20px' }}>
-          {protocol.medications.map((med, idx) => (
-            <li key={idx} style={{ marginBottom: '4px', fontSize: '14px' }}>
-              {med}
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>Critical Information:</h4>
-        <ul style={{ margin: 0, paddingLeft: '20px' }}>
-          {protocol.criticalInfo.map((info, idx) => (
-            <li key={idx} style={{ marginBottom: '4px', fontSize: '14px' }}>
-              {info}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
+ 
 
-function ProtocolCard({ k, protocol, expanded, onToggle }: { k: string; protocol: ProtocolDef; expanded: boolean; onToggle: (k: string) => void }) {
-  return (
-    <div style={{ marginBottom: '12px' }}>
-      <button
-        className="protocol-button"
-        onClick={() => onToggle(k)}
-        style={{
-          width: '100%',
-          textAlign: 'left',
-          padding: '12px 16px',
-          marginBottom: '8px',
-          background: 'var(--panel)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          color: '#e6e9ee',
-          cursor: 'pointer',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
-      >
-        <div>
-          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-            {protocol.name}
-          </div>
-          <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
-            {protocol.description}
-          </div>
-        </div>
-        <div style={{ fontSize: '20px' }}>
-          {expanded ? '▼' : '▶'}
-        </div>
-      </button>
-      {expanded && <ProtocolDetails protocol={protocol} />}
-    </div>
-  );
-}
+// SOBSelector moved to components
 
-function SOBSelector({ protocols }: { protocols: Record<string, ProtocolDef> }) {
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const toggle = (key: string) => setExpanded(expanded === key ? null : key);
-  return (
-    <div>
-      <div style={{ marginBottom: '16px', fontWeight: 'bold' }}>
-        Select the appropriate respiratory protocol:
-      </div>
-      {Object.entries(protocols).map(([key, protocol]) => (
-        <ProtocolCard key={key} k={key} protocol={protocol} expanded={expanded === key} onToggle={toggle} />
-      ))}
-    </div>
-  );
-}
-
-function ChatList({ messages }: { messages: Msg[] }) {
+function ChatList({ messages, onProtocolSelect }: { messages: Msg[]; onProtocolSelect: (key: string) => void }) {
   return (
     <div className="chat">
       {messages.map((m, i) => (
         <div key={i} className={`msg ${m.role}`}>
-          <MessageItem m={m} />
+          <MessageItem m={m} onProtocolSelect={onProtocolSelect} />
         </div>
       ))}
     </div>
   );
 }
 
-function InputRow({ input, loading, onInput, onSend, taRef, onKeyDown, onToggleVoice, voiceSupported, listening }: { input: string; loading: boolean; onInput: (v: string) => void; onSend: () => void; taRef: React.RefObject<HTMLTextAreaElement>; onKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void; onToggleVoice: () => void; voiceSupported: boolean; listening: boolean }) {
+function SectionCard({ title, items }: { title: string; items: string[] }) {
+  if (!items?.length) return null;
+  return (
+    <div className="protocol-dropdown" style={{
+      background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginTop: '8px'
+    }}>
+      <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>{title}</h4>
+      <ul style={{ margin: 0, paddingLeft: '20px' }}>
+        {items.map((line, idx) => (
+          <li key={idx} style={{ marginBottom: '4px', fontSize: '14px' }}>{line}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function hasLines(draft?: NarrativeDraft): boolean {
+  if (!draft) return false;
+  return draft.sections.some(sec => (sec.lines || []).some(line => line.trim().length > 0));
+}
+
+function NarrativePanel({ soap, chronological, nemsis, carePlan, citations, recentOrders }: { soap?: NarrativeDraft; chronological?: NarrativeDraft; nemsis?: NemsisNarrative; carePlan?: CarePlan | null; citations?: Citation[]; recentOrders?: string[] }) {
+  const hasSoap = hasLines(soap);
+  const hasChrono = hasLines(chronological);
+  const hasNemsis = !!(nemsis && (nemsis.eSituation?.primaryComplaint || nemsis.eVitals?.length));
+  const hasCarePlan = !!carePlan;
+  const hasOrders = !!(recentOrders && recentOrders.length);
+  const hasCitations = !!(citations && citations.length);
+
+  if (!hasSoap && !hasChrono && !hasNemsis && !hasCarePlan && !hasOrders && !hasCitations) {
+    return (
+      <div className="narrative-panel" style={{ marginTop: '16px', fontStyle: 'italic', color: 'var(--muted)' }}>
+        Provide patient details (chief complaint, vitals, interventions) and try “Build Narrative” again to auto-fill documentation.
+      </div>
+    );
+  }
+  return (
+    <div className="narrative-panel" style={{ marginTop: '16px' }}>
+      {hasOrders ? (
+        <div style={{ marginBottom: '16px' }}>
+          <h3>Recent Base Orders / Notes</h3>
+          <SectionCard title="Orders" items={recentOrders!} />
+        </div>
+      ) : null}
+      {hasSoap && soap ? (
+        <div style={{ marginBottom: '16px' }}>
+          <h3>SOAP Narrative</h3>
+          {soap.sections.map((sec, i) => {
+            const lines = (sec.lines || []).filter(line => line.trim().length > 0);
+            return <SectionCard key={`soap-${i}`} title={sec.title} items={lines} />;
+          }).filter(Boolean)}
+        </div>
+      ) : null}
+      {hasChrono && chronological ? (
+        <div style={{ marginBottom: '16px' }}>
+          <h3>Chronological Narrative</h3>
+          {chronological.sections.map((sec, i) => {
+            const lines = (sec.lines || []).filter(line => line.trim().length > 0);
+            return <SectionCard key={`chrono-${i}`} title={sec.title} items={lines} />;
+          }).filter(Boolean)}
+        </div>
+      ) : null}
+      {hasNemsis && nemsis ? (
+        <div style={{ marginBottom: '16px' }}>
+          <h3>NEMSIS (summary)</h3>
+          <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
+            eSituation.primaryComplaint: {nemsis.eSituation?.primaryComplaint || '—'}
+          </div>
+        </div>
+      ) : null}
+      {hasCarePlan && carePlan ? (
+        <div style={{ marginBottom: '16px' }}>
+          <h3>Care Plan – {carePlan.protocolCode} {carePlan.protocolTitle}</h3>
+          <SectionCard title="Actions" items={carePlan.actions} />
+          <SectionCard title="Basic Medications" items={carePlan.basicMedications} />
+          <SectionCard title="Critical Notes" items={carePlan.criticalNotes} />
+          <div style={{ marginTop: '8px', fontWeight: 'bold' }}>Base Contact: {carePlan.baseContact}</div>
+        </div>
+      ) : null}
+      {hasCitations ? (
+        <div style={{ marginBottom: '16px' }}>
+          <h3>Source Citations</h3>
+          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px' }}>
+            {citations!.map((c, idx) => (
+              <li key={`${c.title}-${idx}`}>{c.title} ({c.category} – {c.subcategory || 'LA County EMS'})</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function InputRow({ input, loading, onInput, onSend, taRef, onKeyDown, onToggleVoice, voiceSupported, listening, onBuildNarrative }: { input: string; loading: boolean; onInput: (v: string) => void; onSend: () => void; taRef: React.RefObject<HTMLTextAreaElement>; onKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void; onToggleVoice: () => void; voiceSupported: boolean; listening: boolean; onBuildNarrative: () => void }) {
   return (
     <div className="inputRow">
-      <div className="inputInner">
+      <div className="inputInner" style={{ gap: "8px" }}>
         <textarea
           ref={taRef}
           value={input}
@@ -226,22 +160,50 @@ function InputRow({ input, loading, onInput, onSend, taRef, onKeyDown, onToggleV
           aria-label={voiceSupported ? (listening ? "Stop voice input" : "Start voice input") : "Voice not supported"}
           title={voiceSupported ? (listening ? "Stop voice input" : "Start voice input") : "Voice not supported in this browser"}
         >
-          {listening ? "●" : "🎤"}
+          {listening ? "Stop" : "Voice"}
         </button>
         <button onClick={onSend} disabled={loading}>{loading ? "Thinking…" : "Send"}</button>
+        <button onClick={onBuildNarrative} disabled={loading} title="Build SOAP/Chrono/NEMSIS narrative + care plan">
+          Build Narrative
+        </button>
       </div>
     </div>
   );
 }
 
+function extractOrders(content: string): string[] {
+  if (!content) return [];
+  const lines = content
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .filter(line => /base (contact|order)|orders?:/i.test(line));
+  // de-duplicate while preserving order
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const l of lines) {
+    if (!seen.has(l)) {
+      seen.add(l);
+      result.push(l);
+    }
+  }
+  return result;
+}
+
 export default function Page() {
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "I'm EmergiBot. Tell me what you see?" }
+    { role: "assistant", content: "I'm EmergiBot. Tell me what you see? What do you know?\n\nI’m limited to the Los Angeles County Prehospital Care Manual. Reference an LA County protocol, provider impression, or describe the chief complaint so I can map it to the appropriate protocol." }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  const [soap, setSoap] = useState<NarrativeDraft | undefined>(undefined);
+  const [chrono, setChrono] = useState<NarrativeDraft | undefined>(undefined);
+  const [nemsis, setNemsis] = useState<NemsisNarrative | undefined>(undefined);
+  const [carePlan, setCarePlan] = useState<CarePlan | undefined>(undefined);
+  const [citations, setCitations] = useState<Citation[] | undefined>(undefined);
+  const [recentOrders, setRecentOrders] = useState<string[] | undefined>(undefined);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<SpeechRecognitionManager | null>(null);
@@ -273,7 +235,7 @@ export default function Page() {
 
   async function send() {
     if (!input.trim() || loading) return;
-    const newMessages = [...messages, { role: "user", content: input.trim() }];
+    const newMessages: Msg[] = [...messages, { role: "user", content: input.trim() }];
     setMessages(newMessages);
     setInput("");
     setLoading(true);
@@ -285,10 +247,54 @@ export default function Page() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setMessages([...newMessages, { role: "assistant", content: data.text }]);
+      const assistantMsg: Msg = { role: "assistant", content: String(data.text ?? "") };
+      setMessages([...newMessages, assistantMsg]);
+      // Reset narrative panels for standard chat
+      setSoap(undefined);
+      setChrono(undefined);
+      setNemsis(undefined);
+      setCarePlan(undefined);
+      setCitations(Array.isArray(data?.citations) ? data.citations : undefined);
+      const orders = extractOrders(String(data.text ?? ""));
+      setRecentOrders(orders.length ? orders : undefined);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setMessages([...newMessages, { role: "assistant", content: `Sorry, something went wrong: ${message}` }]);
+      const errorMsg: Msg = { role: "assistant", content: `Sorry, something went wrong: ${message}` };
+      setMessages([...newMessages, errorMsg]);
+    } finally {
+      setLoading(false);
+      taRef.current?.focus();
+    }
+  }
+
+  async function buildNarrative() {
+    if (loading) return;
+    const newMessages: Msg[] = [...messages];
+    setLoading(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages, mode: "narrative" })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      if (data?.narrative) {
+        setSoap(data.narrative.soap);
+        setChrono(data.narrative.chronological);
+        setNemsis(data.narrative.nemsis);
+      }
+      if (data?.carePlan) setCarePlan(data.carePlan);
+      setCitations(Array.isArray(data?.citations) ? data.citations : undefined);
+      const orders = extractOrders(String(data.text ?? ""));
+      setRecentOrders(orders.length ? orders : undefined);
+      // Also echo a brief confirmation message with citations count if present
+      const assistantMsg: Msg = { role: "assistant", content: "Built narrative and care plan from current conversation." };
+      setMessages([...newMessages, assistantMsg]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      const errorMsg: Msg = { role: "assistant", content: `Sorry, something went wrong: ${message}` };
+      setMessages([...newMessages, errorMsg]);
     } finally {
       setLoading(false);
       taRef.current?.focus();
@@ -331,26 +337,25 @@ export default function Page() {
     }
   }
 
-  function SOBProtocolGateway() {
-    return (
-      <div>
-        <SOBSelector protocols={SOB_PROTOCOLS} />
-        <div className="quickBar" aria-label="Quick protocol send">
-          {Object.keys(SOB_PROTOCOLS).map(k => (
-            <button key={k} className="quickChip" onClick={() => sendProtocolSelection(k)}>
-              {k}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container">
-      <ChatList messages={messages} />
+      <ChatList messages={messages} onProtocolSelect={sendProtocolSelection} />
+      <NarrativePanel soap={soap} chronological={chrono} nemsis={nemsis} carePlan={carePlan} citations={citations} recentOrders={recentOrders} />
       <div ref={endRef} />
-      <InputRow input={input} loading={loading} onInput={setInput} onSend={send} taRef={taRef} onKeyDown={onKeyDown} onToggleVoice={onToggleVoice} voiceSupported={voiceSupported} listening={listening} />
+      <InputRow
+        input={input}
+        loading={loading}
+        onInput={setInput}
+        onSend={send}
+        taRef={taRef}
+        onKeyDown={onKeyDown}
+        onToggleVoice={onToggleVoice}
+        voiceSupported={voiceSupported}
+        listening={listening}
+        onBuildNarrative={buildNarrative}
+      />
     </div>
   );
 }
+
+// SOBProtocolGateway moved to components
