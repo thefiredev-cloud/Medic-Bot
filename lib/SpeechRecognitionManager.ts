@@ -6,9 +6,33 @@ export type SpeechRecognitionEvents = {
   onError?: (error: string) => void;
 };
 
+// Minimal runtime-safe typings for Web Speech API to avoid depending on ambient DOM types during SSR builds
+type ISpeechRecognitionEvent = {
+  resultIndex: number;
+  results: ArrayLike<{
+    isFinal: boolean;
+    0: { transcript: string };
+  }>;
+};
+
+type ISpeechRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onresult: ((event: ISpeechRecognitionEvent) => void) | null;
+  onerror: ((event: unknown) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+
+type ISpeechRecognitionConstructor = new () => ISpeechRecognition;
+
 // eslint-disable-next-line unicorn/filename-case
 export class SpeechRecognitionManager {
-  private recognition: SpeechRecognition | null = null;
+  private recognition: ISpeechRecognition | null = null;
   private isListeningInternal = false;
   private accumulator = "";
   private events: SpeechRecognitionEvents;
@@ -22,13 +46,12 @@ export class SpeechRecognitionManager {
 
   private initializeRecognition(): void {
     const win = window as unknown as {
-      SpeechRecognition?: typeof window.SpeechRecognition;
-      webkitSpeechRecognition?: typeof window.SpeechRecognition;
+      SpeechRecognition?: ISpeechRecognitionConstructor;
+      webkitSpeechRecognition?: ISpeechRecognitionConstructor;
     };
-    const RecognitionCtor = win.SpeechRecognition || win.webkitSpeechRecognition;
+    const RecognitionCtor: ISpeechRecognitionConstructor | undefined = win.SpeechRecognition || win.webkitSpeechRecognition;
     if (!RecognitionCtor) return;
-    // Narrow type to standard SpeechRecognition where supported
-    this.recognition = new (RecognitionCtor as unknown as new () => SpeechRecognition)();
+    this.recognition = new RecognitionCtor();
     this.recognition.continuous = true;
     this.recognition.interimResults = true;
     this.recognition.lang = "en-US";
@@ -39,14 +62,14 @@ export class SpeechRecognitionManager {
       this.events.onStart?.();
     };
 
-    this.recognition.onresult = (event: SpeechRecognitionEvent) => {
+    this.recognition.onresult = (event: ISpeechRecognitionEvent) => {
       const { accumulator, interim } = this.processResultEvent(event);
       this.accumulator = accumulator;
       if (interim) this.events.onResult?.((accumulator + interim).trim(), false);
     };
 
-    this.recognition.onerror = (event: Event & { error?: string }) => {
-      const errorEvent = event as { error?: string };
+    this.recognition.onerror = (event: unknown) => {
+      const errorEvent = (event as { error?: string } | undefined) ?? {};
       const message = typeof errorEvent.error === "string" ? errorEvent.error : "unknown_error";
       this.events.onError?.(message);
     };
@@ -57,7 +80,7 @@ export class SpeechRecognitionManager {
     };
   }
 
-  private processResultEvent(event: SpeechRecognitionEvent): { accumulator: string; interim: string } {
+  private processResultEvent(event: ISpeechRecognitionEvent): { accumulator: string; interim: string } {
     let interim = "";
     let accumulator = this.accumulator;
     for (let i = event.resultIndex; i < event.results.length; i++) {

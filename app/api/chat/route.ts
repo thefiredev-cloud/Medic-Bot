@@ -9,6 +9,7 @@ import type { NarrativeInput } from "@/lib/managers/NarrativeManager";
 import { ResearchManager } from "@/lib/managers/ResearchManager";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import { buildContext, searchKB } from "@/lib/retrieval";
+import type { KBDoc } from "@/lib/retrieval";
 import type { TriageResult } from "@/lib/triage";
 import { buildSearchAugmentation, buildTriageContext, triageInput } from "@/lib/triage";
 
@@ -177,7 +178,7 @@ function buildNarrativeInput(triage: TriageResult, carePlan: CarePlan | null): N
   };
 }
 
-function prioritizeProtocolHits(hits: Array<{ title: string }>, bestCode?: string) {
+function prioritizeProtocolHits(hits: KBDoc[], bestCode?: string): KBDoc[] {
   if (!bestCode) return hits;
   const rx = new RegExp(`\\b${bestCode}\\b`);
   const preferred = hits.filter(h => rx.test(h.title));
@@ -186,11 +187,11 @@ function prioritizeProtocolHits(hits: Array<{ title: string }>, bestCode?: strin
 }
 
 function buildCitations(combinedQuery: string, bestCode: string | undefined, cap = 4) {
-  let hits = searchKB(combinedQuery, 12);
+  let hits: KBDoc[] = searchKB(combinedQuery, 12);
   hits = prioritizeProtocolHits(hits, bestCode);
   const raw = hits.map(d => ({ title: d.title, category: d.category, subcategory: d.subcategory }));
   const seen = new Set<string>();
-  const citations: Array<{ title: string; category: string; subcategory: string }> = [];
+  const citations: Array<{ title: string; category: string; subcategory?: string }> = [];
   for (const c of raw) {
     if (seen.has(c.title)) continue;
     seen.add(c.title);
