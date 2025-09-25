@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { CarePlanManager } from "@/lib/managers/CarePlanManager";
+import type { CarePlan } from "@/lib/managers/CarePlanManager";
 import { NarrativeManager } from "@/lib/managers/NarrativeManager";
 import type { NarrativeInput } from "@/lib/managers/NarrativeManager";
 import { ResearchManager } from "@/lib/managers/ResearchManager";
