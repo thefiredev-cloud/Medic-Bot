@@ -1,10 +1,19 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import type { KeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SpeechRecognitionManager } from "../lib/SpeechRecognitionManager";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
+type ProtocolDef = {
+  name: string;
+  description: string;
+  medications: string[];
+  criticalInfo: string[];
+};
+
 // SOB Protocol data with medications and critical info
-const SOB_PROTOCOLS = {
+const SOB_PROTOCOLS: Record<string, ProtocolDef> = {
   "Airway Obstruction 1231": {
     name: "Airway Obstruction (1231)",
     description: "Complete/partial airway obstruction, foreign body, choking, stridor",
@@ -87,17 +96,180 @@ const SOB_PROTOCOLS = {
   }
 };
 
+function isSOBProtocolMessage(content: string) {
+  return content.includes("Select the appropriate respiratory protocol") &&
+    content.includes("Airway Obstruction") &&
+    content.includes("Respiratory Distress");
+}
+
+function MessageItem({ m }: { m: Msg }) {
+  if (!isSOBProtocolMessage(m.content)) {
+    return <div style={{ whiteSpace: 'pre-wrap' }}>{m.content}</div>;
+  }
+  return <SOBProtocolGateway />;
+}
+
+function ProtocolDetails({ protocol }: { protocol: ProtocolDef }) {
+  return (
+    <div className="protocol-dropdown" style={{
+      background: 'var(--bg)',
+      border: '1px solid var(--border)',
+      borderRadius: '8px',
+      padding: '16px',
+      marginTop: '8px'
+    }}>
+      <div style={{ marginBottom: '16px' }}>
+        <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>Medications:</h4>
+        <ul style={{ margin: 0, paddingLeft: '20px' }}>
+          {protocol.medications.map((med, idx) => (
+            <li key={idx} style={{ marginBottom: '4px', fontSize: '14px' }}>
+              {med}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>Critical Information:</h4>
+        <ul style={{ margin: 0, paddingLeft: '20px' }}>
+          {protocol.criticalInfo.map((info, idx) => (
+            <li key={idx} style={{ marginBottom: '4px', fontSize: '14px' }}>
+              {info}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function ProtocolCard({ k, protocol, expanded, onToggle }: { k: string; protocol: ProtocolDef; expanded: boolean; onToggle: (k: string) => void }) {
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <button
+        className="protocol-button"
+        onClick={() => onToggle(k)}
+        style={{
+          width: '100%',
+          textAlign: 'left',
+          padding: '12px 16px',
+          marginBottom: '8px',
+          background: 'var(--panel)',
+          border: '1px solid var(--border)',
+          borderRadius: '8px',
+          color: '#e6e9ee',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+            {protocol.name}
+          </div>
+          <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
+            {protocol.description}
+          </div>
+        </div>
+        <div style={{ fontSize: '20px' }}>
+          {expanded ? '▼' : '▶'}
+        </div>
+      </button>
+      {expanded && <ProtocolDetails protocol={protocol} />}
+    </div>
+  );
+}
+
+function SOBSelector({ protocols }: { protocols: Record<string, ProtocolDef> }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const toggle = (key: string) => setExpanded(expanded === key ? null : key);
+  return (
+    <div>
+      <div style={{ marginBottom: '16px', fontWeight: 'bold' }}>
+        Select the appropriate respiratory protocol:
+      </div>
+      {Object.entries(protocols).map(([key, protocol]) => (
+        <ProtocolCard key={key} k={key} protocol={protocol} expanded={expanded === key} onToggle={toggle} />
+      ))}
+    </div>
+  );
+}
+
+function ChatList({ messages }: { messages: Msg[] }) {
+  return (
+    <div className="chat">
+      {messages.map((m, i) => (
+        <div key={i} className={`msg ${m.role}`}>
+          <MessageItem m={m} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InputRow({ input, loading, onInput, onSend, taRef, onKeyDown, onToggleVoice, voiceSupported, listening }: { input: string; loading: boolean; onInput: (v: string) => void; onSend: () => void; taRef: React.RefObject<HTMLTextAreaElement>; onKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void; onToggleVoice: () => void; voiceSupported: boolean; listening: boolean }) {
+  return (
+    <div className="inputRow">
+      <div className="inputInner">
+        <textarea
+          ref={taRef}
+          value={input}
+          placeholder="Ask about medical protocols, treatments, base contact requirements, emergency scenarios..."
+          onChange={(e) => onInput(e.target.value)}
+          onKeyDown={onKeyDown}
+        />
+        <button
+          type="button"
+          className={`micButton${listening ? " listening" : ""}`}
+          onClick={onToggleVoice}
+          disabled={loading || !voiceSupported}
+          aria-label={voiceSupported ? (listening ? "Stop voice input" : "Start voice input") : "Voice not supported"}
+          title={voiceSupported ? (listening ? "Stop voice input" : "Start voice input") : "Voice not supported in this browser"}
+        >
+          {listening ? "●" : "🎤"}
+        </button>
+        <button onClick={onSend} disabled={loading}>{loading ? "Thinking…" : "Send"}</button>
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   const [messages, setMessages] = useState<Msg[]>([
     { role: "assistant", content: "I'm EmergiBot. Tell me what you see?" }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [expandedProtocol, setExpandedProtocol] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const speechRef = useRef<SpeechRecognitionManager | null>(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  useEffect(() => {
+    const mgr = new SpeechRecognitionManager({
+      onStart: () => setListening(true),
+      onStop: () => setListening(false),
+      onResult: (text, isFinal) => {
+        setInput(text);
+        if (isFinal) {
+          // Optional: auto-send on final result
+          // do not auto-send while loading
+        }
+      },
+      onError: () => {
+        setListening(false);
+      }
+    });
+    speechRef.current = mgr;
+    setVoiceSupported(mgr.supported);
+    return () => {
+      speechRef.current?.abort();
+      speechRef.current = null;
+    };
+  }, []);
 
   async function send() {
     if (!input.trim() || loading) return;
@@ -114,135 +286,71 @@ export default function Page() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setMessages([...newMessages, { role: "assistant", content: data.text }]);
-    } catch (err: any) {
-      setMessages([...newMessages, { role: "assistant", content: `Sorry, something went wrong: ${err?.message || err}` }]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setMessages([...newMessages, { role: "assistant", content: `Sorry, something went wrong: ${message}` }]);
     } finally {
       setLoading(false);
       taRef.current?.focus();
     }
   }
 
-  // Check if message contains SOB protocol options
-  function isSOBProtocolMessage(content: string) {
-    return content.includes("Select the appropriate respiratory protocol") && 
-           content.includes("Airway Obstruction") &&
-           content.includes("Respiratory Distress");
-  }
-
-  // Handle SOB protocol button click
-  function handleSOBProtocolClick(protocolKey: string) {
-    setExpandedProtocol(expandedProtocol === protocolKey ? null : protocolKey);
-  }
-
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       send();
     }
   }
 
-  return (
-    <div className="container">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>EmergiBot</h1>
-        <div className="badge">LA County EMS Protocols • For First Responders</div>
-      </div>
+  function onToggleVoice() {
+    if (!speechRef.current) return;
+    if (listening) {
+      speechRef.current.stop();
+      // After stop, we can auto-send if there's input
+      // Avoid sending if already loading
+      if (!loading && input.trim()) {
+        setTimeout(() => {
+          // slight delay to ensure onStop fired
+          send();
+        }, 50);
+      }
+    } else {
+      // Focus textarea for better UX
+      taRef.current?.focus();
+      speechRef.current.start();
+    }
+  }
 
-      <div className="chat">
-        {messages.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`}>
-            {isSOBProtocolMessage(m.content) ? (
-              <div>
-                <div style={{ marginBottom: '16px', fontWeight: 'bold' }}>
-                  Select the appropriate respiratory protocol:
-                </div>
-                {Object.entries(SOB_PROTOCOLS).map(([key, protocol]) => (
-                  <div key={key} style={{ marginBottom: '12px' }}>
-                    <button
-                      className="protocol-button"
-                      onClick={() => handleSOBProtocolClick(key)}
-                      style={{
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '12px 16px',
-                        marginBottom: '8px',
-                        background: 'var(--panel)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        color: '#e6e9ee',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                          {protocol.name}
-                        </div>
-                        <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
-                          {protocol.description}
-                        </div>
-                      </div>
-                      <div style={{ fontSize: '20px' }}>
-                        {expandedProtocol === key ? '▼' : '▶'}
-                      </div>
-                    </button>
-                    
-                    {expandedProtocol === key && (
-                      <div className="protocol-dropdown" style={{
-                        background: 'var(--bg)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        marginTop: '8px'
-                      }}>
-                        <div style={{ marginBottom: '16px' }}>
-                          <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>Medications:</h4>
-                          <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                            {protocol.medications.map((med, idx) => (
-                              <li key={idx} style={{ marginBottom: '4px', fontSize: '14px' }}>
-                                {med}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        
-                        <div>
-                          <h4 style={{ margin: '0 0 8px 0', color: 'var(--accent)' }}>Critical Information:</h4>
-                          <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                            {protocol.criticalInfo.map((info, idx) => (
-                              <li key={idx} style={{ marginBottom: '4px', fontSize: '14px' }}>
-                                {info}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              m.content
-            )}
-          </div>
-        ))}
-        <div ref={endRef} />
-      </div>
+  function sendProtocolSelection(protocolKey: string) {
+    const text = protocolKey;
+    setInput(text);
+    if (!loading) {
+      setTimeout(() => {
+        send();
+      }, 10);
+    }
+  }
 
-      <div className="inputRow">
-        <div className="inputInner">
-          <textarea
-            ref={taRef}
-            value={input}
-            placeholder="Ask about medical protocols, treatments, base contact requirements, emergency scenarios..."
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-          />
-          <button onClick={send} disabled={loading}>{loading ? "Thinking…" : "Send"}</button>
+  function SOBProtocolGateway() {
+    return (
+      <div>
+        <SOBSelector protocols={SOB_PROTOCOLS} />
+        <div className="quickBar" aria-label="Quick protocol send">
+          {Object.keys(SOB_PROTOCOLS).map(k => (
+            <button key={k} className="quickChip" onClick={() => sendProtocolSelection(k)}>
+              {k}
+            </button>
+          ))}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="container">
+      <ChatList messages={messages} />
+      <div ref={endRef} />
+      <InputRow input={input} loading={loading} onInput={setInput} onSend={send} taRef={taRef} onKeyDown={onKeyDown} onToggleVoice={onToggleVoice} voiceSupported={voiceSupported} listening={listening} />
     </div>
   );
 }

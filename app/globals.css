@@ -4,14 +4,19 @@
   --muted: #8b96a9;
   --accent: #4ea1ff;
   --border: #1b2330;
+  --brand: #e63946;
+  --brand-ink: #ffe8ea;
 }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: #e6e9ee; margin: 0; }
 
 * { box-sizing: border-box; }
 
 .container {
   max-width: 840px;
   margin: 0 auto;
-  padding: 24px 16px 96px;
+  padding: 96px 16px 110px;
 }
 
 .card {
@@ -36,6 +41,7 @@
   line-height: 1.5;
   white-space: pre-wrap;
   border: 1px solid var(--border);
+  color: #e6e9ee;
 }
 
 .user { background: #0e1116; align-self: flex-end; }
@@ -74,6 +80,24 @@ button {
   cursor: pointer;
 }
 
+/* Mic button */
+.micButton {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: #0e1218;
+  color: #c7d2e1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.micButton.listening {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(78,161,255,0.15);
+  color: var(--accent);
+}
+
 .badge {
   font-size: 12px;
   color: var(--muted);
@@ -102,3 +126,81 @@ button {
     transform: translateY(0);
   }
 }
+
+/* Quick reply bar */
+.quickBar {
+  position: sticky;
+  top: 60px;
+  z-index: 10;
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.quickChip {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  background: #0f1722;
+  color: #c7d2e1;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+.quickChip:hover { background: #111a28; }
+.quickChip:active { transform: translateY(1px); }
+
+/* Enterprise header */
+.siteHeader {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(11,13,16,0.85);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.siteHeaderInner {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; }
+.brandMark {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: radial-gradient(120% 120% at 20% 10%, var(--brand) 0%, #8b0000 60%, #330000 100%);
+  border: 1px solid #4a0d12;
+  color: var(--brand-ink);
+  font-size: 18px;
+}
+.brandText { line-height: 1.1; }
+.brandTitle { font-weight: 700; letter-spacing: 0.2px; }
+.brandSubtitle { font-size: 12px; color: var(--muted); }
+.envBadge {
+  font-size: 12px; padding: 6px 10px; border-radius: 999px;
+  background: #0f1722; border: 1px solid var(--border); color: var(--muted);
+}
+
+/* Improve message readability */
+.msg {
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+.msg.user { background: linear-gradient(180deg, #0f131b, #0a0d13); }
+.msg.assistant { background: linear-gradient(180deg, #0b1222, #0b0f18); }
+
+/* Focus treatment */
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(78,161,255,0.15);
+}
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+button:hover:not(:disabled) { filter: brightness(1.05); }
+
+/* Protocol button polish */
+.protocol-button { transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease; }
+.protocol-button:hover { transform: translateY(-1px); }
