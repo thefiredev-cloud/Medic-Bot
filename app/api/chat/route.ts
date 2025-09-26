@@ -2,9 +2,9 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { ChatService } from "@/lib/managers/ChatService";
-import { knowledgeBaseInitializer } from "@/lib/managers/KnowledgeBaseInitializer";
 import { createLogger } from "@/lib/log";
+import { ChatService } from "@/lib/managers/chat-service";
+import { knowledgeBaseInitializer } from "@/lib/managers/knowledge-base-initializer";
 
 const requestSchema = z.object({
   messages: z

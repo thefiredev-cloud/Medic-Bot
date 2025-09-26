@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { knowledgeBaseInitializer } from "@/lib/managers/KnowledgeBaseInitializer";
+import { knowledgeBaseInitializer } from "@/lib/managers/knowledge-base-initializer";
 import { POST as chatPost } from "@/app/api/chat/route";
 
 describe("POST /api/chat", () => {

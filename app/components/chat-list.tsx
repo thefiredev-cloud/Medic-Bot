@@ -1,6 +1,6 @@
+import { HealthStatusBanner } from "@/app/components/health-status-banner";
 import { MessageItem } from "@/app/components/sob-protocols";
 import type { ChatMessage } from "@/app/types/chat";
-import { HealthStatusBanner } from "@/app/components/health-status-banner";
 
 type ChatListProps = {
   messages: ChatMessage[];

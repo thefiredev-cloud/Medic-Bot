@@ -60,14 +60,19 @@ export class LLMClient {
       return { type: "circuit-open" };
     }
 
-    const attemptResult = await this.trySendWithRetries(payload);
-    if (attemptResult.type === "success") {
+    const result = await this.trySendWithRetries(payload);
+    this.handlePostAttempt(result);
+    return result;
+  }
+
+  private handlePostAttempt(result: LLMClientResult): void {
+    if (result.type === "success") {
       this.resetBreaker();
-    } else if (attemptResult.type === "error") {
+      return;
+    }
+    if (result.type === "error") {
       this.recordFailure();
     }
-
-    return attemptResult;
   }
 
   private async trySendWithRetries(payload: ChatPayload): Promise<LLMClientResult> {
@@ -75,38 +80,54 @@ export class LLMClient {
     let lastError: string | null = null;
 
     while (attempt <= this.maxRetries) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
-        const response = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          const text = await response.text().catch(() => "");
-          throw new Error(`LLM error ${response.status}: ${text}`);
-        }
-
-        const body = (await response.json()) as {
-          choices?: Array<{ message?: { content?: string } }>;
-        };
-        const message = body.choices?.[0]?.message?.content;
-        return { type: "success", text: message ?? "" };
-      } catch (error: unknown) {
+      const result = await this.trySendOnce(payload).catch<LLMClientResult>((error) => {
         lastError = error instanceof Error ? error.message : String(error);
-        await this.waitForBackoff(attempt);
-        attempt += 1;
+        return { type: "error", message: lastError };
+      });
+
+      if (result.type === "success") {
+        return result;
       }
+
+      await this.waitForBackoff(attempt);
+      attempt += 1;
     }
 
     return { type: "error", message: lastError ?? "Unknown LLM failure" };
+  }
+
+  private async trySendOnce(payload: ChatPayload): Promise<LLMClientResult> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const response = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: this.buildHeaders(),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(`LLM error ${response.status}: ${text}`);
+      }
+
+      const body = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const message = body.choices?.[0]?.message?.content;
+      return { type: "success", text: message ?? "" };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private buildHeaders(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.apiKey}`,
+      "Content-Type": "application/json",
+    };
   }
 
   private async waitForBackoff(attempt: number): Promise<void> {

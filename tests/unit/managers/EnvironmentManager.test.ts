@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
 
-import { EnvironmentManager } from "@/lib/managers/EnvironmentManager";
+import { EnvironmentManager } from "@/lib/managers/environment-manager";
 
 describe("EnvironmentManager", () => {
   const ORIGINAL_ENV = { ...process.env };

@@ -1,7 +1,7 @@
 import "./globals.css";
 
-import React from "react";
 import type { Metadata } from "next";
+import React from "react";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://fanciful-pithivier-308482.netlify.app"),

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { EnvironmentManager } from "@/lib/managers/EnvironmentManager";
-import { knowledgeBaseInitializer } from "@/lib/managers/KnowledgeBaseInitializer";
 import { createLogger } from "@/lib/log";
+import { EnvironmentManager } from "@/lib/managers/environment-manager";
+import { knowledgeBaseInitializer } from "@/lib/managers/knowledge-base-initializer";
 
 export const runtime = "nodejs";
 
@@ -17,8 +17,8 @@ export async function GET() {
       kb: {
         loaded: status.loaded,
         docCount: status.docCount,
-        scope: env.kbScope ?? "unknown",
-        source: status.sourcePath ?? "auto",
+        scope: env.KB_SCOPE,
+        source: status.sourcePath ?? env.KB_SOURCE ?? "auto",
       },
       model: env.llmModel,
       runtime: env.NODE_ENV,

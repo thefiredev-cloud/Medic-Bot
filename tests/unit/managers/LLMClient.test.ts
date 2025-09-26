@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { LLMClient } from "@/lib/managers/LLMClient";
+import { LLMClient } from "@/lib/managers/llm-client";
 
 describe("LLMClient", () => {
   const fetchMock = vi.fn();

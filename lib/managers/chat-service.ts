@@ -1,19 +1,19 @@
 import type { ChatMessage } from "@/app/types/chat";
-import { CarePlanManager } from "@/lib/managers/CarePlanManager";
+import { createLogger } from "@/lib/log";
 import type { CarePlan } from "@/lib/managers/CarePlanManager";
-import { EnvironmentManager } from "@/lib/managers/EnvironmentManager";
+import { CarePlanManager } from "@/lib/managers/CarePlanManager";
+import { EnvironmentManager } from "@/lib/managers/environment-manager";
 import { GuardrailManager } from "@/lib/managers/GuardrailManager";
-import { knowledgeBaseInitializer } from "@/lib/managers/KnowledgeBaseInitializer";
-import { LLMClient } from "@/lib/managers/LLMClient";
-import { NarrativeManager } from "@/lib/managers/NarrativeManager";
+import { knowledgeBaseInitializer } from "@/lib/managers/knowledge-base-initializer";
+import { LLMClient } from "@/lib/managers/llm-client";
 import type { NarrativeInput } from "@/lib/managers/NarrativeManager";
+import { NarrativeManager } from "@/lib/managers/NarrativeManager";
 import { ResearchManager } from "@/lib/managers/ResearchManager";
 import { RetrievalManager } from "@/lib/managers/RetrievalManager";
-import { createLogger } from "@/lib/log";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import type { KBDoc } from "@/lib/retrieval";
-import { buildSearchAugmentation, buildTriageContext, triageInput } from "@/lib/triage";
 import type { TriageResult } from "@/lib/triage";
+import { buildSearchAugmentation, buildTriageContext, triageInput } from "@/lib/triage";
 
 type ChatMode = "chat" | "narrative" | undefined;
 
@@ -44,8 +44,8 @@ export class ChatService {
   private readonly carePlanManager = new CarePlanManager();
   private readonly narrativeManager = new NarrativeManager();
   private readonly researchManager = new ResearchManager();
-  private readonly llmClient: LLMClient;
   private readonly logger = createLogger("ChatService");
+  private readonly llmClient: LLMClient;
 
   constructor(llmClient?: LLMClient) {
     this.llmClient = llmClient ?? new LLMClient({
@@ -60,51 +60,75 @@ export class ChatService {
     await knowledgeBaseInitializer.warm();
 
     const latestUser = this.getLatestUserMessage(messages);
-    const triage = triageInput(latestUser);
-    this.applyProtocolOverride(latestUser, triage);
-
-    const searchAugmentation = buildSearchAugmentation(triage);
-    const combinedQuery = [latestUser, searchAugmentation].filter(Boolean).join(" ").trim() || latestUser;
-    const retrieval = await this.retrieval.search({ rawText: combinedQuery, maxChunks: 6 });
-
-    const payload = {
-      model: this.env.llmModel,
-      temperature: 0.2,
-      messages: this.buildMessages(retrieval.context, buildTriageContext(triage), messages),
-    } as const;
+    const triage = this.buildTriage(latestUser);
+    const retrieval = await this.retrieveKnowledge(latestUser, triage);
+    const payload = this.buildPayload(retrieval.context, buildTriageContext(triage), messages);
 
     const llmResult = await this.llmClient.sendChat(payload);
     const citations = this.buildCitations(retrieval.hits, triage);
+    const guardrailOutcome = this.guardrailManagerCheck(llmResult, triage, citations);
+    if (guardrailOutcome.type === "fallback") return guardrailOutcome.response;
 
+    const guardrail = this.guardrails.evaluate(guardrailOutcome.text);
+
+    if (mode === "narrative") {
+      return this.buildNarrativeResponse(guardrailOutcome.text, triage, citations, guardrail.notes);
+    }
+
+    this.logger.info("Chat succeeded", {
+      citationCount: citations.length,
+      protocols: triage.matchedProtocols.map((protocol) => protocol.tp_code).slice(0, 3),
+    });
+
+    return {
+      text: guardrailOutcome.text,
+      citations,
+      triage,
+      guardrailNotes: guardrail.notes,
+    };
+  }
+
+  private buildTriage(latestUser: string): TriageResult {
+    const triage = triageInput(latestUser);
+    this.applyProtocolOverride(latestUser, triage);
+    return triage;
+  }
+
+  private async retrieveKnowledge(latestUser: string, triage: TriageResult) {
+    const searchAugmentation = buildSearchAugmentation(triage);
+    const combinedQuery = [latestUser, searchAugmentation].filter(Boolean).join(" ").trim() || latestUser;
+    return this.retrieval.search({ rawText: combinedQuery, maxChunks: 6 });
+  }
+
+  private buildPayload(context: string, intake: string, messages: ChatMessage[]) {
+    return {
+      model: this.env.llmModel,
+      temperature: 0.2,
+      messages: this.buildMessages(context, intake, messages),
+    } as const;
+  }
+
+  private guardrailManagerCheck(
+    llmResult: Awaited<ReturnType<LLMClient["sendChat"]>>,
+    triage: TriageResult,
+    citations: ChatResponse["citations"],
+  ): { type: "fallback"; response: ChatResponse } | { type: "success"; text: string } {
     if (llmResult.type !== "success" || !llmResult.text) {
       this.logger.warn("LLM unavailable, returning fallback", {
         reason: llmResult.type,
         breaker: this.llmClient.getBreakerState(),
       });
-      return this.buildFallbackResponse(triage, citations, llmResult.type === "circuit-open" ? ["Language model unavailable"] : undefined);
+      const fallbackNotes = llmResult.type === "circuit-open" ? ["Language model unavailable"] : undefined;
+      return { type: "fallback", response: this.buildFallbackResponse(triage, citations, fallbackNotes) };
     }
 
     const guardrail = this.guardrails.evaluate(llmResult.text);
     if (!guardrail.pcmCitationsPresent || guardrail.containsUnauthorizedMed || guardrail.outsideScope) {
       this.logger.warn("Guardrail violation detected", guardrail);
-      return this.buildFallbackResponse(triage, citations, guardrail.notes);
+      return { type: "fallback", response: this.buildFallbackResponse(triage, citations, guardrail.notes) };
     }
 
-    if (mode === "narrative") {
-      return await this.buildNarrativeResponse(llmResult.text, triage, citations, guardrail.notes);
-    }
-
-    this.logger.info("Chat succeeded", {
-      citationCount: citations.length,
-      protocols: triage.matchedProtocols.map((p) => p.tp_code).slice(0, 3),
-    });
-
-    return {
-      text: llmResult.text,
-      citations,
-      triage,
-      guardrailNotes: guardrail.notes,
-    };
+    return { type: "success", text: llmResult.text };
   }
 
   private getLatestUserMessage(messages: ChatMessage[]): string {
@@ -129,22 +153,20 @@ export class ChatService {
     );
     if (index < 0) return;
     const chosen = triage.matchedProtocols[index];
-    triage.matchedProtocols = [chosen, ...triage.matchedProtocols.filter((_, idx) => idx !== index)];
+    triage.matchedProtocols = [
+      chosen,
+      ...triage.matchedProtocols.filter((protocol, currentIndex) => currentIndex !== index),
+    ];
   }
 
   private buildCitations(hits: KBDoc[], triage: TriageResult) {
     const preferred = this.prioritizeProtocolHits(hits, triage.matchedProtocols?.[0]?.tp_code);
-    const seen = new Set<string>();
-    const citations: Array<{ title: string; category: string; subcategory?: string }> = [];
-
-    for (const doc of preferred) {
-      if (seen.has(doc.title)) continue;
-      seen.add(doc.title);
-      citations.push({ title: doc.title, category: doc.category, subcategory: doc.subcategory });
-      if (citations.length >= 4) break;
-    }
-
-    return citations;
+    return preferred.reduce<Array<{ title: string; category: string; subcategory?: string }>>((accumulated, doc) => {
+      if (accumulated.length >= 4 || accumulated.some((citation) => citation.title === doc.title)) {
+        return accumulated;
+      }
+      return [...accumulated, { title: doc.title, category: doc.category, subcategory: doc.subcategory }];
+    }, []);
   }
 
   private prioritizeProtocolHits(hits: KBDoc[], bestCode?: string): KBDoc[] {
@@ -174,7 +196,7 @@ export class ChatService {
     triage: TriageResult,
     citations: ChatResponse["citations"],
     notes: string[] = [],
-  ): ChatResponse {
+  ): Promise<ChatResponse> {
     const carePlan = this.carePlanManager.build(triage);
     const baseInput = this.buildNarrativeInput(triage, carePlan);
     const soap = this.narrativeManager.buildSOAP(baseInput);
@@ -214,17 +236,41 @@ export class ChatService {
   }
 
   private formatVitalsLine(triage: TriageResult): string | undefined {
-    const vitals = triage.vitals || {};
-    const parts: string[] = [];
-    if (vitals.systolic !== undefined && vitals.diastolic !== undefined) parts.push(`BP ${vitals.systolic}/${vitals.diastolic}`);
-    if (vitals.heartRate !== undefined) parts.push(`HR ${vitals.heartRate}`);
-    if (vitals.respiratoryRate !== undefined) parts.push(`RR ${vitals.respiratoryRate}`);
-    if (vitals.spo2 !== undefined) parts.push(`SpO2 ${vitals.spo2}%`);
-    if (vitals.temperatureF !== undefined) parts.push(`Temp ${vitals.temperatureF}F`);
-    if (vitals.temperatureC !== undefined) parts.push(`Temp ${vitals.temperatureC}C`);
-    if (vitals.glucose !== undefined) parts.push(`Glucose ${vitals.glucose}`);
-    if (vitals.gcs !== undefined) parts.push(`GCS ${vitals.gcs}`);
-    return parts.length ? parts.join(", ") : undefined;
+    const vitals = triage.vitals;
+    if (!vitals) return undefined;
+
+    const vitalParts = [
+      this.formatBloodPressure(vitals),
+      this.formatNumericVital("HR", vitals.heartRate),
+      this.formatNumericVital("RR", vitals.respiratoryRate),
+      this.formatSaturation(vitals.spo2),
+      this.formatTemperature(vitals.temperatureF, "F"),
+      this.formatTemperature(vitals.temperatureC, "C"),
+      this.formatNumericVital("Glucose", vitals.glucose),
+      this.formatNumericVital("GCS", vitals.gcs),
+    ].filter(Boolean);
+
+    return vitalParts.length ? vitalParts.join(", ") : undefined;
+  }
+
+  private formatBloodPressure(vitals: NonNullable<TriageResult["vitals"]>): string | undefined {
+    if (vitals.systolic === undefined || vitals.diastolic === undefined) return undefined;
+    return `BP ${vitals.systolic}/${vitals.diastolic}`;
+  }
+
+  private formatNumericVital(label: string, value: number | undefined): string | undefined {
+    if (value === undefined) return undefined;
+    return `${label} ${value}`;
+  }
+
+  private formatSaturation(value: number | undefined): string | undefined {
+    if (value === undefined) return undefined;
+    return `SpO2 ${value}%`;
+  }
+
+  private formatTemperature(value: number | undefined, unit: "F" | "C"): string | undefined {
+    if (value === undefined) return undefined;
+    return `Temp ${value}${unit}`;
   }
 
   private buildDemographics(triage: TriageResult): string[] | undefined {

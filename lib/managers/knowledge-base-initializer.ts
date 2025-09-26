@@ -1,5 +1,5 @@
-import { EnvironmentManager } from "@/lib/managers/EnvironmentManager";
 import { createLogger } from "@/lib/log";
+import { EnvironmentManager } from "@/lib/managers/environment-manager";
 import { KnowledgeBaseManager } from "@/lib/storage/knowledge-base-manager";
 
 type KnowledgeBaseStatus = {
