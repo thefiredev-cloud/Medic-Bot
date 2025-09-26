@@ -21,16 +21,20 @@ jobs:
       - name: ESLint strict
         run: npm run lint:strict
       - name: Netlify link
+        if: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}
         run: npx -y netlify-cli link --id "${{ secrets.NETLIFY_SITE_ID }}"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       - name: Pull production env
+        if: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}
         run: npx -y netlify-cli env:pull --environment=production --yes
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       - name: Netlify build (production context)
+        if: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}
         run: npx -y netlify-cli build --context production | tee netlify-build.log
       - name: Fail if any function bundle > 50MB
+        if: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}
         run: |
           if find .netlify/functions -type f -name "*.zip" -size +50M | grep -q .; then
             echo "Function bundle exceeds 50MB limit"
@@ -38,6 +42,7 @@ jobs:
           fi
           echo "Function bundle sizes OK"
       - name: Upload artifacts
+        if: ${{ always() && secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' }}
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -45,4 +50,9 @@ jobs:
           path: |
             netlify-build.log
             .netlify/**
+      - name: Fallback build (no Netlify secrets present)
+        if: ${{ !(secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '') }}
+        run: |
+          echo "Netlify secrets not configured; running Next.js build as fallback"
+          npm run build
 
