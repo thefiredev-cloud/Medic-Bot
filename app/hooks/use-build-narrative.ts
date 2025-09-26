@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import type { CarePlan, ChatMessage, Citation } from "@/app/types/chat";
+import type { CarePlan, ChatMessage, Citation, NarrativeDraft, NemsisNarrative } from "@/app/types/chat";
 
 type ChatState = {
   messages: ChatMessage[];
@@ -9,10 +9,10 @@ type ChatState = {
 };
 
 type NarrativeState = {
-  setSoap: (value: unknown) => void;
-  setChronological: (value: unknown) => void;
-  setNemsis: (value: unknown) => void;
-  setCarePlan: (value: CarePlan | undefined) => void;
+  setSoap: React.Dispatch<React.SetStateAction<NarrativeDraft | undefined>>;
+  setChronological: React.Dispatch<React.SetStateAction<NarrativeDraft | undefined>>;
+  setNemsis: React.Dispatch<React.SetStateAction<NemsisNarrative | undefined>>;
+  setCarePlan: React.Dispatch<React.SetStateAction<CarePlan | undefined>>;
 };
 
 type BuildDeps = {
@@ -32,9 +32,9 @@ export function useBuildNarrative({ chat, narrative, taRef, appendAssistant, han
     try {
       const data = await request({ messages: chat.messages, mode: "narrative" });
       if (data?.narrative) {
-        narrative.setSoap(data.narrative.soap);
-        narrative.setChronological(data.narrative.chronological);
-        narrative.setNemsis(data.narrative.nemsis);
+        narrative.setSoap(data.narrative.soap as NarrativeDraft | undefined);
+        narrative.setChronological(data.narrative.chronological as NarrativeDraft | undefined);
+        narrative.setNemsis(data.narrative.nemsis as NemsisNarrative | undefined);
       }
       if (data?.carePlan) narrative.setCarePlan(data.carePlan as CarePlan);
       handleCitations(data?.citations);
@@ -45,7 +45,7 @@ export function useBuildNarrative({ chat, narrative, taRef, appendAssistant, han
       appendAssistant(`Sorry, something went wrong: ${message}`);
     } finally {
       chat.setLoading(false);
-      taRef.current?.focus();
+      (taRef as React.MutableRefObject<HTMLTextAreaElement | null>).current?.focus();
     }
   }, [appendAssistant, chat, handleCitations, handleOrders, narrative, request, taRef]);
 }

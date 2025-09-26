@@ -21,8 +21,8 @@ async function requestChat(payload: unknown) {
 }
 
 type ControllerRefs = {
-  taRef: React.RefObject<HTMLTextAreaElement>;
-  sendRef: React.RefObject<() => Promise<void>>;
+  taRef: React.MutableRefObject<HTMLTextAreaElement | null>;
+  sendRef: React.MutableRefObject<() => Promise<void>>;
 };
 
 type ControllerState = {

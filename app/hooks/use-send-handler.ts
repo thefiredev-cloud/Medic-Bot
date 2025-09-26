@@ -18,7 +18,7 @@ type NarrativeState = {
 type SendDeps = {
   chat: ChatState;
   narrative: NarrativeState;
-  taRef: React.RefObject<HTMLTextAreaElement>;
+  taRef: React.MutableRefObject<HTMLTextAreaElement | null>;
   appendAssistant: (text: string) => void;
   handleCitations: (value: unknown) => void;
   handleOrders: (text: string | undefined) => void;
