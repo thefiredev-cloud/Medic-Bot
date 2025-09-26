@@ -1,0 +1,149 @@
+import { useCallback, useRef } from "react";
+
+import { useAppendAssistant } from "@/app/hooks/use-append-assistant";
+import { useBuildNarrative } from "@/app/hooks/use-build-narrative";
+import { useChatState } from "@/app/hooks/use-chat-state";
+import { useNarrativeState } from "@/app/hooks/use-narrative-state";
+import { useOrdersCitations } from "@/app/hooks/use-orders-citations";
+import { useScrollAnchor } from "@/app/hooks/use-scroll-anchor";
+import { useSendHandler } from "@/app/hooks/use-send-handler";
+import { useVoiceInput } from "@/app/hooks/use-voice-input";
+import type { ChatMessage } from "@/app/types/chat";
+
+async function requestChat(payload: unknown) {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
+type ControllerRefs = {
+  taRef: React.RefObject<HTMLTextAreaElement>;
+  sendRef: React.RefObject<() => Promise<void>>;
+};
+
+type ControllerState = {
+  chat: ReturnType<typeof useChatState>;
+  narrative: ReturnType<typeof useNarrativeState>;
+  endRef: React.RefObject<HTMLDivElement>;
+  refs: ControllerRefs;
+};
+
+function useControllerState(initialMessages: ChatMessage[]): ControllerState {
+  const chat = useChatState(initialMessages);
+  const narrative = useNarrativeState();
+  const endRef = useScrollAnchor([chat.messages]);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const sendRef = useRef<() => Promise<void>>(async () => {});
+  return { chat, narrative, endRef, refs: { taRef, sendRef } };
+}
+
+function useVoiceControls(chat: ReturnType<typeof useChatState>, refs: ControllerRefs) {
+  const voice = useVoiceInput(chat.setInput, () => {
+    void refs.sendRef.current?.();
+  });
+
+  const onToggleVoice = useCallback(() => {
+    voice.toggle(refs.taRef, chat.loading, Boolean(chat.input.trim()));
+  }, [chat.input, chat.loading, voice, refs.taRef]);
+
+  return { voice, onToggleVoice };
+}
+
+function useSelectionHandler(chat: ReturnType<typeof useChatState>, send: () => Promise<void>) {
+  return useCallback(
+    (protocolKey: string) => {
+      chat.setInput(protocolKey);
+      if (!chat.loading) {
+        setTimeout(() => {
+          void send();
+        }, 10);
+      }
+    },
+    [chat, send],
+  );
+}
+
+type PageController = {
+  chat: ReturnType<typeof useChatState>;
+  narrative: ReturnType<typeof useNarrativeState>;
+  endRef: React.RefObject<HTMLDivElement>;
+  taRef: React.RefObject<HTMLTextAreaElement>;
+  voice: ReturnType<typeof useVoiceInput>;
+  send: () => Promise<void>;
+  buildNarrative: () => Promise<void>;
+  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onToggleVoice: () => void;
+  sendProtocolSelection: (protocolKey: string) => void;
+};
+
+type ControllerDeps = ReturnType<typeof useControllerState> & {
+  appendAssistant: (text: string) => void;
+  handlers: ReturnType<typeof useOrdersCitations>;
+};
+
+function useChatHandlersConfig({ chat, narrative, refs, appendAssistant, handlers }: ControllerDeps) {
+  const send = useSendHandler({
+    chat,
+    narrative,
+    taRef: refs.taRef,
+    appendAssistant,
+    handleCitations: handlers.handleCitations,
+    handleOrders: handlers.handleOrders,
+    request: requestChat,
+  });
+
+  const buildNarrative = useBuildNarrative({
+    chat,
+    narrative,
+    taRef: refs.taRef,
+    appendAssistant,
+    handleCitations: handlers.handleCitations,
+    handleOrders: handlers.handleOrders,
+    request: requestChat,
+  });
+
+  refs.sendRef.current = send;
+
+  return { send, buildNarrative };
+}
+
+export function usePageController(initialMessages: ChatMessage[]): PageController {
+  const controllerState = useControllerState(initialMessages);
+  const handlers = useOrdersCitations(controllerState.narrative.setRecentOrders, controllerState.narrative.setCitations);
+  const appendAssistant = useAppendAssistant(controllerState.chat);
+  const { send, buildNarrative } = useChatHandlersConfig({
+    ...controllerState,
+    appendAssistant,
+    handlers,
+  });
+
+  const { voice, onToggleVoice } = useVoiceControls(controllerState.chat, controllerState.refs);
+  const sendProtocolSelection = useSelectionHandler(controllerState.chat, send);
+
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        void send();
+      }
+    },
+    [send],
+  );
+
+  return {
+    chat: controllerState.chat,
+    narrative: controllerState.narrative,
+    endRef: controllerState.endRef,
+    taRef: controllerState.refs.taRef,
+    voice,
+    send,
+    buildNarrative,
+    onKeyDown,
+    onToggleVoice,
+    sendProtocolSelection,
+  };
+}

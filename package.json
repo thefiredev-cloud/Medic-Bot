@@ -9,6 +9,7 @@
     "lint": "next lint",
     "lint:strict": "eslint --ext .ts,.tsx --max-warnings 0 .",
     "prepare": "husky install",
+    "build:netlify": "npx -y netlify-cli link --id $NETLIFY_SITE_ID && npx -y netlify-cli env:pull --environment=production --yes && npx -y netlify-cli build --context production",
     "ingest:pdfs": "node scripts/ingest-pdfs.cjs",
     "ingest:md": "node scripts/ingest-md.cjs",
     "convert:pdfs:md": "node scripts/convert-pdfs-to-md.cjs",
@@ -39,7 +40,7 @@
     "lint-staged": "^15.2.10"
   },
   "engines": {
-    "node": ">=18.17.0 <21"
+    "node": ">=20 <21"
   },
   "overrides": {
     "eslint-import-resolver-typescript": "3.6.1"

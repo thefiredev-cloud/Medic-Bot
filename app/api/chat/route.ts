@@ -12,6 +12,7 @@ import { buildContext, searchKB } from "@/lib/retrieval";
 import type { KBDoc } from "@/lib/retrieval";
 import type { TriageResult } from "@/lib/triage";
 import { buildSearchAugmentation, buildTriageContext, triageInput } from "@/lib/triage";
+import { KnowledgeBaseManager } from "@/lib/storage/knowledge-base-manager";
 
 export const runtime = "nodejs";
 
@@ -96,13 +97,13 @@ function applyProtocolOverride(text: string, triage: TriageResult): void {
   triage.matchedProtocols = [chosen, ...triage.matchedProtocols.filter((unused, i) => i !== index)];
 }
 
-function prepareTriageContexts(parsed: z.infer<typeof ReqSchema>) {
+async function prepareTriageContexts(parsed: z.infer<typeof ReqSchema>) {
   const userLatest = parsed.messages.slice().reverse().find(m => m.role === "user")?.content || "";
   const triage = triageInput(userLatest);
   applyProtocolOverride(userLatest, triage);
   const searchAug = buildSearchAugmentation(triage);
   const combinedQuery = searchAug ? `${userLatest} ${searchAug}` : userLatest;
-  const kbContext = buildContext(combinedQuery, 6);
+  const kbContext = await buildContext(combinedQuery, 6);
   const triageContext = buildTriageContext(triage);
   return { userLatest, triage, combinedQuery, kbContext, triageContext };
 }
@@ -186,8 +187,8 @@ function prioritizeProtocolHits(hits: KBDoc[], bestCode?: string): KBDoc[] {
   return [...preferred, ...others];
 }
 
-function buildCitations(combinedQuery: string, bestCode: string | undefined, cap = 4) {
-  let hits: KBDoc[] = searchKB(combinedQuery, 12);
+async function buildCitations(combinedQuery: string, bestCode: string | undefined, cap = 4) {
+  let hits: KBDoc[] = await searchKB(combinedQuery, 12);
   hits = prioritizeProtocolHits(hits, bestCode);
   const raw = hits.map(d => ({ title: d.title, category: d.category, subcategory: d.subcategory }));
   const seen = new Set<string>();
@@ -232,17 +233,31 @@ function allowRequestForIp(ip: string): boolean {
   return true;
 }
 
+async function prepareRequest(req: NextRequest) {
+  const kbManager = new KnowledgeBaseManager();
+  await kbManager.load();
+
+  const ip = getClientIp(req);
+  if (!allowRequestForIp(ip)) {
+    return { error: Response.json({ error: "Rate limit exceeded" }, { status: 429 }) } as const;
+  }
+
+  const raw = await req.text();
+  const parsedResult = validateAndParseBody(raw);
+  if ("error" in parsedResult) {
+    return { error: parsedResult.error } as const;
+  }
+
+  return { parsed: parsedResult.parsed } as const;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const ip = getClientIp(req);
-    if (!allowRequestForIp(ip)) return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
+    const prepared = await prepareRequest(req);
+    if ("error" in prepared) return prepared.error;
 
-    const raw = await req.text();
-    const parsedResult = validateAndParseBody(raw);
-    if ("error" in parsedResult) return parsedResult.error;
-    const { parsed } = parsedResult;
-
-    const { triage, combinedQuery, kbContext, triageContext } = prepareTriageContexts(parsed);
+    const { parsed } = prepared;
+    const { triage, combinedQuery, kbContext, triageContext } = await prepareTriageContexts(parsed);
     const payload = buildChatPayload(triageContext, kbContext, parsed.messages);
 
     const baseUrl = process.env.LLM_BASE_URL || "https://api.openai.com/v1";
@@ -256,7 +271,7 @@ export async function POST(req: NextRequest) {
 
     if (!isNarrative) {
       const bestCode = triage.matchedProtocols?.[0]?.tp_code;
-      const citations = buildCitations(combinedQuery, bestCode, 4);
+      const citations = await buildCitations(combinedQuery, bestCode, 4);
       return Response.json({ text, citations });
     }
 
@@ -268,7 +283,7 @@ export async function POST(req: NextRequest) {
     const chrono = nm.buildChronological(baseInput);
     const nemsis = nm.buildNemsis(baseInput);
     const bestCode = triage.matchedProtocols?.[0]?.tp_code;
-    const citations = buildCitations(combinedQuery, bestCode, 4);
+    const citations = await buildCitations(combinedQuery, bestCode, 4);
 
     const researchMgr = new ResearchManager();
     const research = await researchMgr.search();

@@ -1,5 +1,10 @@
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    outputFileTracingExcludes: {
+      "*": ["**/PDFs/**", "**/scripts/**"]
+    }
+  },
   async headers() {
     return [
       {

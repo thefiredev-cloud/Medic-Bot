@@ -26,10 +26,10 @@ export class RetrievalManager {
     this.defaultLimit = options?.defaultLimit ?? 6;
   }
 
-  public search(query: RetrievalQuery): RetrievalResult {
+  public async search(query: RetrievalQuery): Promise<RetrievalResult> {
     const limit = query.maxChunks ?? this.defaultLimit;
-    const context = buildContext(query.rawText, limit);
-    const hits = searchKB(query.rawText, limit);
+    const context = await buildContext(query.rawText, limit);
+    const hits = await searchKB(query.rawText, limit);
     return { context, hits };
   }
 }
