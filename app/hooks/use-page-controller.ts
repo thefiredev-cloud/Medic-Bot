@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { useAppendAssistant } from "@/app/hooks/use-append-assistant";
 import { useBuildNarrative } from "@/app/hooks/use-build-narrative";
@@ -30,6 +30,8 @@ type ControllerState = {
   narrative: ReturnType<typeof useNarrativeState>;
   endRef: React.RefObject<HTMLDivElement>;
   refs: ControllerRefs;
+  errorBanner: string | null;
+  setErrorBanner: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 function useControllerState(initialMessages: ChatMessage[]): ControllerState {
@@ -38,7 +40,8 @@ function useControllerState(initialMessages: ChatMessage[]): ControllerState {
   const endRef = useScrollAnchor([chat.messages]);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const sendRef = useRef<() => Promise<void>>(async () => {});
-  return { chat, narrative, endRef, refs: { taRef, sendRef } };
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  return { chat, narrative, endRef, refs: { taRef, sendRef }, errorBanner, setErrorBanner };
 }
 
 function useVoiceControls(chat: ReturnType<typeof useChatState>, refs: ControllerRefs) {
@@ -78,6 +81,8 @@ type PageController = {
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onToggleVoice: () => void;
   sendProtocolSelection: (protocolKey: string) => void;
+  errorBanner: string | null;
+  setErrorBanner: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 type ControllerDeps = ReturnType<typeof useControllerState> & {
@@ -85,7 +90,9 @@ type ControllerDeps = ReturnType<typeof useControllerState> & {
   handlers: ReturnType<typeof useOrdersCitations>;
 };
 
-function useChatHandlersConfig({ chat, narrative, refs, appendAssistant, handlers }: ControllerDeps) {
+function useChatHandlersConfig({ chat, narrative, refs, appendAssistant, handlers, setErrorBanner }: ControllerDeps & {
+  setErrorBanner: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
   const send = useSendHandler({
     chat,
     narrative,
@@ -94,6 +101,7 @@ function useChatHandlersConfig({ chat, narrative, refs, appendAssistant, handler
     handleCitations: handlers.handleCitations,
     handleOrders: handlers.handleOrders,
     request: requestChat,
+    setErrorBanner,
   });
 
   const buildNarrative = useBuildNarrative({
@@ -104,6 +112,7 @@ function useChatHandlersConfig({ chat, narrative, refs, appendAssistant, handler
     handleCitations: handlers.handleCitations,
     handleOrders: handlers.handleOrders,
     request: requestChat,
+    setErrorBanner,
   });
 
   refs.sendRef.current = send;
@@ -119,6 +128,7 @@ export function usePageController(initialMessages: ChatMessage[]): PageControlle
     ...controllerState,
     appendAssistant,
     handlers,
+    setErrorBanner: controllerState.setErrorBanner,
   });
 
   const { voice, onToggleVoice } = useVoiceControls(controllerState.chat, controllerState.refs);
@@ -145,5 +155,7 @@ export function usePageController(initialMessages: ChatMessage[]): PageControlle
     onKeyDown,
     onToggleVoice,
     sendProtocolSelection,
+    errorBanner: controllerState.errorBanner,
+    setErrorBanner: controllerState.setErrorBanner,
   };
 }

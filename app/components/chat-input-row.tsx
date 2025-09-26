@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import type { KeyboardEvent } from "react";
+
+import { TextAreaAutoResizer } from "@/app/tools/TextAreaAutoResizer";
 
 export type ChatInputRowProps = {
   input: string;
@@ -27,32 +30,63 @@ export function ChatInputRow({
   listening,
   onBuildNarrative,
 }: ChatInputRowProps) {
+  const resizer = useMemo(() => new TextAreaAutoResizer({ minHeight: 64, maxHeight: 208 }), []);
+
+  useEffect(() => {
+    if (taRef.current) {
+      resizer.adjust(taRef.current);
+    }
+  }, [input, resizer, taRef]);
+
+  const handleSubmit = () => {
+    if (!input.trim() || loading) return;
+    onSend();
+  };
+
   return (
-    <div className="inputRow">
-      <div className="inputInner" style={{ gap: "8px" }}>
+    <div className="inputRow" role="form" aria-label="Chat controls">
+      <div className="inputInner">
         <textarea
           ref={taRef}
           value={input}
-          placeholder="Ask about medical protocols, treatments, base contact requirements, emergency scenarios..."
+          placeholder="Ask about LA County protocols, treatments, base contact requirements, emergency scenarios…"
           onChange={(event) => onInput(event.target.value)}
-          onKeyDown={onKeyDown}
+          onKeyDown={(event) => {
+            onKeyDown(event);
+          }}
+          aria-label="Message the medic bot"
         />
-        <button
-          type="button"
-          className={`micButton${listening ? " listening" : ""}`}
-          onClick={onToggleVoice}
-          disabled={loading || !voiceSupported}
-          aria-label={voiceSupported ? (listening ? "Stop voice input" : "Start voice input") : "Voice not supported"}
-          title={voiceSupported ? (listening ? "Stop voice input" : "Start voice input") : "Voice not supported in this browser"}
-        >
-          {listening ? "Stop" : "Voice"}
-        </button>
-        <button onClick={onSend} disabled={loading}>
-          {loading ? "Thinking…" : "Send"}
-        </button>
-        <button onClick={onBuildNarrative} disabled={loading} title="Build SOAP/Chrono/NEMSIS narrative + care plan">
-          Build Narrative
-        </button>
+        <div className="inputActions">
+          <button
+            type="button"
+            className={`micButton${listening ? " listening" : ""}`}
+            onClick={onToggleVoice}
+            disabled={loading || !voiceSupported}
+            aria-label={
+              voiceSupported ? (listening ? "Stop voice input" : "Start voice input") : "Voice not supported"
+            }
+            title={
+              voiceSupported
+                ? listening
+                  ? "Stop voice input"
+                  : "Start voice input"
+                : "Voice not supported in this browser"
+            }
+          >
+            {listening ? "Stop" : "Voice"}
+          </button>
+          <button type="button" onClick={handleSubmit} disabled={loading}>
+            {loading ? "Thinking…" : "Send"}
+          </button>
+          <button
+            type="button"
+            onClick={onBuildNarrative}
+            disabled={loading}
+            title="Build SOAP/Chrono/NEMSIS narrative + care plan"
+          >
+            Narrative
+          </button>
+        </div>
       </div>
     </div>
   );

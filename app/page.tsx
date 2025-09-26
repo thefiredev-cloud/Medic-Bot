@@ -16,7 +16,11 @@ function initialAssistantMessage(): ChatMessage {
 function ChatExperience({ controller }: { controller: ReturnType<typeof usePageController> }) {
   return (
     <div className="container">
-      <ChatList messages={controller.chat.messages} onProtocolSelect={controller.sendProtocolSelection} />
+      <ChatList
+        messages={controller.chat.messages}
+        onProtocolSelect={controller.sendProtocolSelection}
+        errorBanner={controller.errorBanner}
+      />
       <NarrativePanel
         soap={controller.narrative.soap}
         chronological={controller.narrative.chronological}

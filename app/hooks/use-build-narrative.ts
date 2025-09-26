@@ -23,12 +23,14 @@ type BuildDeps = {
   handleCitations: (value: unknown) => void;
   handleOrders: (text: string | undefined) => void;
   request: (payload: unknown) => Promise<{ text?: string; citations?: Citation[]; narrative?: Record<string, unknown>; carePlan?: CarePlan } & Record<string, unknown>>;
+  setErrorBanner: (message: string | null) => void;
 };
 
-export function useBuildNarrative({ chat, narrative, taRef, appendAssistant, handleCitations, handleOrders, request }: BuildDeps) {
+export function useBuildNarrative({ chat, narrative, taRef, appendAssistant, handleCitations, handleOrders, request, setErrorBanner }: BuildDeps) {
   return useCallback(async () => {
     if (chat.loading) return;
     chat.setLoading(true);
+    setErrorBanner(null);
     try {
       const data = await request({ messages: chat.messages, mode: "narrative" });
       if (data?.narrative) {
@@ -40,12 +42,16 @@ export function useBuildNarrative({ chat, narrative, taRef, appendAssistant, han
       handleCitations(data?.citations);
       handleOrders(data?.text);
       appendAssistant("Built narrative and care plan from current conversation.");
+      if ((data as { fallback?: boolean })?.fallback) {
+        setErrorBanner("Service degraded. Narrative generated from fallback guidance.");
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       appendAssistant(`Sorry, something went wrong: ${message}`);
+      setErrorBanner("Unable to build narrative. Please retry once connectivity restores.");
     } finally {
       chat.setLoading(false);
       (taRef as React.MutableRefObject<HTMLTextAreaElement | null>).current?.focus();
     }
-  }, [appendAssistant, chat, handleCitations, handleOrders, narrative, request, taRef]);
+  }, [appendAssistant, chat, handleCitations, handleOrders, narrative, request, setErrorBanner, taRef]);
 }

@@ -1,6 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { EnvironmentManager } from "@/lib/managers/EnvironmentManager";
+
 export type KnowledgeBaseAsset = {
   id: string;
   title: string;
@@ -18,6 +20,7 @@ type KnowledgeBaseSourceOptions = {
 export class KnowledgeBaseManager {
   private static cache: KnowledgeBaseAsset[] | null = null;
   private readonly options?: KnowledgeBaseSourceOptions;
+  private readonly env = EnvironmentManager.load();
 
   constructor(options?: KnowledgeBaseSourceOptions) {
     this.options = options;
@@ -58,7 +61,7 @@ export class KnowledgeBaseManager {
 
   private resolveLocalPaths(): string[] {
     const paths: string[] = [];
-    const configured = this.options?.absolutePath ?? process.env.KB_DATA_PATH;
+    const configured = this.options?.absolutePath ?? this.env.KB_DATA_PATH;
     if (configured) paths.push(this.resolveToAbsolute(configured));
     paths.push(path.join(process.cwd(), "public", "kb", "ems_kb_clean.json"));
     paths.push(path.join(process.cwd(), "data", "ems_kb_clean.json"));
@@ -66,9 +69,13 @@ export class KnowledgeBaseManager {
   }
 
   private resolveRemoteUrl(): string | null {
-    const configured = this.options?.remoteUrl ?? process.env.KB_REMOTE_URL;
+    const configured = this.options?.remoteUrl ?? this.env.KB_REMOTE_URL;
     if (configured) return configured;
-    const base = process.env.KB_REMOTE_BASE_URL || process.env.DEPLOY_PRIME_URL || process.env.DEPLOY_URL || process.env.URL;
+    const base =
+      this.env.KB_REMOTE_BASE_URL ||
+      process.env.DEPLOY_PRIME_URL ||
+      process.env.DEPLOY_URL ||
+      process.env.URL;
     if (!base) return null;
     try {
       const url = new URL("/kb/ems_kb_clean.json", base);

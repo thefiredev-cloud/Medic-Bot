@@ -7,14 +7,14 @@ A comprehensive EMS protocol assistant for fire and first responders. Local JSON
 1) **Create env**
    ```bash
    cp .env.example .env
-   # put your API key in LLM_API_KEY
+   # set LLM_API_KEY and keep KB_SCOPE=pcm, KB_SOURCE=clean
    ```
 
 2) **Install + run**
    ```bash
    npm i
    npm run dev
-   # then visit http://localhost:3000
+   # visit http://localhost:3000
    ```
 
 3) **Test it**
@@ -28,18 +28,29 @@ A comprehensive EMS protocol assistant for fire and first responders. Local JSON
   - Returns the assistant text (non‑streaming for simplicity)
 
 ## Features
-- **47 LA County EMS Protocols** covering all medical emergencies
-- **Quick bullet-point format** for rapid field reference
-- **Base contact requirements** clearly marked (YES/NO)
+- **LA County PCM focused** – KB scope restricted to clean PCM ingestion
+- **Rapid bullet-point answers** with base contact and med dosing
 - **Voice command optimized** for hands-free use
-- **Comprehensive search** across all protocols
+- **Health endpoint** (`/api/health`) for deployments
+- **Fallback guardrails** if LLM unreachable
 
 ## Upgrade paths
 - **Supabase + pgvector**: swap `lib/retrieval.ts` with your DB search and pass results to the model.
 - **Streaming**: switch the fetch in `app/api/chat/route.ts` to `stream: true` and stream SSE to the client.
 - **Add more protocols**: add chunks to `data/ems_kb.json` (fields are obvious).
 
+## Scripts
+- `npm run dev` – start dev server
+- `npm run lint` – lint sources
+- `npm run test` – Vitest unit/integration
+- `npm run test:e2e` – Playwright suite (requires server)
+- `npm run smoke` – hits `/api/health` and `/api/chat`
+
+## Deployment (Netlify)
+- Ensure Node 20 runtime (see `package.json` engines)
+- Set env vars: `LLM_API_KEY`, `KB_SCOPE=pcm`, `KB_SOURCE=clean`, optional KB path
+- Pre-deploy: `npm run lint && npm run test && npm run test:e2e`
+- Optional: `SMOKE_BASE_URL=https://<site>.netlify.app npm run smoke`
+
 ## Important
-This bot is **for educational and reference purposes only** and should not replace proper medical training or official protocol manuals.
-# Medic-Bot
-# Medic-Bot
+This bot is **for educational reference** only and does not replace official prehospital training or command authority.
