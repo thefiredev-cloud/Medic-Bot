@@ -43,7 +43,7 @@ export function useBuildNarrative({ chat, narrative, taRef, appendAssistant, han
       handleOrders(data?.text);
       appendAssistant("Built narrative and care plan from current conversation.");
       if ((data as { fallback?: boolean })?.fallback) {
-        setErrorBanner("Service degraded. Narrative generated from fallback guidance.");
+        setErrorBanner("Limited mode - using offline guidance only.");
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

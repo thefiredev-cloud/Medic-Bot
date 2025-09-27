@@ -3,9 +3,10 @@ import { test, expect } from "@playwright/test";
 test.describe("Medic Bot chat", () => {
   test("user can send message and receive response", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("I'm EmergiBot")).toBeVisible();
+    const welcome = page.getByText("I use the Los Angeles County Prehospital Care Manual", { exact: false });
+    await expect(welcome).toBeVisible();
 
-    const input = page.getByRole("textbox", { name: "Message the medic bot" });
+    const input = page.getByRole("textbox", { name: "Message Medic Bot" });
     await input.fill("Chest pain");
     await input.press("Enter");
 

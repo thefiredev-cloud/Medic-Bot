@@ -59,7 +59,7 @@ export function ChatInputRow({
           placeholder="Ask about LA County protocols, treatments, base contact requirements, emergency scenarios…"
           onChange={handleInputChange}
           onKeyDown={onKeyDown}
-          aria-label="Message the medic bot"
+          aria-label="Message Medic Bot"
         />
         <ChatActionButtons
           loading={loading}
@@ -99,7 +99,7 @@ function ChatActionButtons({
         {loading ? "Thinking…" : "Send"}
       </button>
       <button type="button" onClick={onBuildNarrative} disabled={loading} title="Build SOAP/Chrono/NEMSIS narrative + care plan">
-        Narrative
+        Build Narrative
       </button>
     </div>
   );

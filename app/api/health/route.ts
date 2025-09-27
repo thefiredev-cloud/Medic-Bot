@@ -8,20 +8,26 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const logger = createLogger("api.health");
-  const env = EnvironmentManager.load();
+  EnvironmentManager.load();
 
   try {
     const status = await knowledgeBaseInitializer.warm();
+    const diagnostics = knowledgeBaseInitializer.statusWithEnvironment();
     return NextResponse.json({
       status: "ok",
       kb: {
         loaded: status.loaded,
         docCount: status.docCount,
-        scope: env.KB_SCOPE,
-        source: status.sourcePath ?? env.KB_SOURCE ?? "auto",
+        scope: diagnostics.env.knowledgeBase.scope,
+        source: status.sourcePath ?? diagnostics.env.knowledgeBase.source ?? "auto",
+        dataPath: diagnostics.env.knowledgeBase.dataPath,
+        remoteUrl: diagnostics.env.knowledgeBase.remoteUrl,
+        remoteBaseUrl: diagnostics.env.knowledgeBase.remoteBaseUrl,
+        attempts: diagnostics.attempts,
+        lastSource: diagnostics.lastSource,
       },
-      model: env.llmModel,
-      runtime: env.NODE_ENV,
+      llm: diagnostics.env.llm,
+      runtime: diagnostics.env.nodeEnv,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);

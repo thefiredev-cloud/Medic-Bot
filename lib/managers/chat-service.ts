@@ -56,8 +56,12 @@ export class ChatService {
     });
   }
 
-  public async handle({ messages, mode }: ChatRequest): Promise<ChatResponse> {
+  public async warm(): Promise<void> {
     await knowledgeBaseInitializer.warm();
+  }
+
+  public async handle({ messages, mode }: ChatRequest): Promise<ChatResponse> {
+    await this.warm();
 
     const latestUser = this.getLatestUserMessage(messages);
     const triage = this.buildTriage(latestUser);
@@ -70,6 +74,11 @@ export class ChatService {
     if (guardrailOutcome.type === "fallback") return guardrailOutcome.response;
 
     const guardrail = this.guardrails.evaluate(guardrailOutcome.text);
+    if (guardrail.corrections.length) {
+      const corrected = applyCorrections(guardrailOutcome.text, guardrail.corrections);
+      guardrailOutcome.text = corrected;
+      guardrail.notes.push("Medication doses adjusted to match PCM guidelines.");
+    }
 
     if (mode === "narrative") {
       return this.buildNarrativeResponse(guardrailOutcome.text, triage, citations, guardrail.notes);
@@ -84,7 +93,7 @@ export class ChatService {
       text: guardrailOutcome.text,
       citations,
       triage,
-      guardrailNotes: guardrail.notes,
+      guardrailNotes: [...guardrail.notes, ...guardrail.dosingIssues],
     };
   }
 
@@ -312,5 +321,13 @@ export class ChatService {
     }
     return items.length ? items : undefined;
   }
+}
+
+function applyCorrections(text: string, corrections: Array<{ original: string; replacement: string }>): string {
+  let updated = text;
+  for (const correction of corrections) {
+    updated = updated.replace(correction.original, correction.replacement);
+  }
+  return updated;
 }
 

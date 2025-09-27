@@ -247,6 +247,7 @@ Response: Protocol selection menu with 5 specific SOB protocols
 - **Query Logs**: Track common queries and response accuracy
 - **Performance Metrics**: Monitor response times and error rates
 - **User Feedback**: Collect field usage feedback for improvements
+- **Health Diagnostics**: `/api/health` returns KB scope, doc count, resolution attempts (local vs remote), last successful source, and LLM configuration snapshot. `scripts/smoke.js` prints this data for deployment pipelines.
 
 ---
 

@@ -1,4 +1,6 @@
 /* eslint-disable unicorn/filename-case */
+import { createDefaultMedicationManager } from "@/lib/dosing/registry";
+import type { MedicationCalculationResult } from "@/lib/dosing/types";
 import type { TriageResult } from "@/lib/triage";
 
 export type CarePlan = {
@@ -8,9 +10,23 @@ export type CarePlan = {
   baseContact: string;           // e.g., "YES - ..." or "NO - ..."
   basicMedications: string[];    // concise med bullets with dose/route criteria
   criticalNotes: string[];       // cautions, monitoring, destination criteria
+  medicationsDetailed?: Array<{
+    name: string;
+    details: string[];
+    citations: string[];
+  }>;
+  weightBased?: Array<{
+    name: string;
+    route: string;
+    dosePerKg: string;
+    range: string;
+    citations: string[];
+  }>;
 };
 
 export class CarePlanManager {
+  private readonly medicationManager = createDefaultMedicationManager();
+
   public build(triage: TriageResult): CarePlan | null {
     const best = triage.matchedProtocols?.[0];
     if (!best) return null;
@@ -29,7 +45,6 @@ export class CarePlanManager {
 
   private buildFor1211(triage: TriageResult): CarePlan {
     const sbp = triage.vitals?.systolic ?? undefined;
-    const canConsiderNitro = typeof sbp === "number" && sbp >= 90;
 
     const actions: string[] = [
       "Assess airway, breathing, circulation; support as needed.",
@@ -38,12 +53,18 @@ export class CarePlanManager {
       "Continuous cardiac and vital sign monitoring; reassess frequently.",
     ];
 
-    const basicMedications: string[] = [
-      "Aspirin 324 mg PO chewed – if no allergy/active bleeding and not already fully dosed.",
-      canConsiderNitro
-        ? "Nitroglycerin 0.4 mg SL q5 min prn – if SBP ≥ 90 mmHg, no PDE‑5 inhibitor use, and no suspected RV infarct."
-        : "Nitroglycerin – hold pending adequate SBP (≥ 90 mmHg) and RV infarct assessment.",
-    ];
+    const basicMedications: string[] = [];
+    basicMedications.push(...this.summarizeMedication("aspirin", { scenario: "chest pain" }));
+    basicMedications.push(...this.summarizeMedication("nitroglycerin", { scenario: "chest pain", systolicBP: sbp }, {
+      default: "0.4 mg SL q5 min prn – if SBP ≥ 90 mmHg, no PDE‑5 use, no suspected RV infarct.",
+      hold: "Hold nitroglycerin until SBP ≥ 90 mmHg and RV infarct ruled out.",
+    }));
+
+    const detailPackages = this.buildMedicationDetails([
+      { id: "nitroglycerin", scenario: "chest pain", sbp },
+      { id: "aspirin", scenario: "chest pain" },
+      { id: "epinephrine", scenario: "push", sbp },
+    ]);
 
     const criticalNotes: string[] = [
       "Include protocol reference in documentation: 1211 – Cardiac Chest Pain.",
@@ -58,6 +79,8 @@ export class CarePlanManager {
       baseContact: "YES – for concerning ECG changes/STEMI activation or as per local policy.",
       basicMedications,
       criticalNotes,
+      medicationsDetailed: detailPackages.details,
+      weightBased: detailPackages.weightBased,
     };
   }
 
@@ -68,10 +91,16 @@ export class CarePlanManager {
       "Vascular access as needed; monitor and reassess vitals/pain.",
     ];
 
-    const basicMedications: string[] = [
-      "Ondansetron 4 mg ODT/IV/IM, may repeat x1 in 15 minutes prn nausea/vomiting.",
-      "Analgesia per MCG 1345 (e.g., acetaminophen, ketorolac, fentanyl) per indications/contraindications.",
-    ];
+    const basicMedications: string[] = [];
+    basicMedications.push(...this.summarizeMedication("ondansetron", { scenario: "nausea" }));
+    basicMedications.push("Analgesia per MCG 1345 – select agent based on contraindications and pain severity.");
+
+    const detailPackages = this.buildMedicationDetails([
+      { id: "ondansetron", scenario: "nausea" },
+      { id: "ketorolac", scenario: "pain" },
+      { id: "acetaminophen", scenario: "pain" },
+      { id: "fentanyl", scenario: "pain" },
+    ]);
 
     const criticalNotes = [
       "Use Protocol 1205 – GI/GU Emergencies for abdominal pain without trauma.",
@@ -86,6 +115,8 @@ export class CarePlanManager {
       baseContact: "NO – unless condition worsens or per local policy.",
       basicMedications,
       criticalNotes,
+      medicationsDetailed: detailPackages.details,
+      weightBased: detailPackages.weightBased,
     };
   }
 
@@ -104,9 +135,15 @@ export class CarePlanManager {
     if (typeof fluidDose === "number") {
       basicMedications.push(`Normal Saline ${fluidDose} mL IV rapid infusion if signs of poor perfusion (20 mL/kg).`);
     } else {
-      basicMedications.push("Normal Saline 20 mL/kg IV rapid infusion if signs of poor perfusion.");
+      basicMedications.push("Normal Saline 20 mL/kg IV rapid infusion if signs of poor perfusion (consult MCG 1309 weight table).");
     }
-    basicMedications.push("Analgesia per MCG 1345 (dose per MCG 1309).");
+    basicMedications.push("Analgesia per MCG 1345 using MCG 1309 dosing guidance.");
+
+    const detailPackages = this.buildMedicationDetails([
+      { id: "fentanyl", scenario: "pain" },
+      { id: "acetaminophen", scenario: "pain" },
+      { id: "ketorolac", scenario: "pain" },
+    ], triage.weightKg);
 
     const criticalNotes: string[] = [
       "Use Protocol 1202 – General Medical for nonspecific symptoms without specific protocol.",
@@ -121,8 +158,60 @@ export class CarePlanManager {
       baseContact: "YES – For potential neurological compromise or per local policy.",
       basicMedications,
       criticalNotes,
+      medicationsDetailed: detailPackages.details,
+      weightBased: detailPackages.weightBased,
     };
   }
+
+  private summarizeMedication(
+    id: string,
+    context: { scenario?: string; systolicBP?: number },
+    overrides?: { default: string; hold?: string },
+  ): string[] {
+    const result = this.medicationManager.calculate(id, {
+      scenario: context.scenario,
+      systolicBP: context.systolicBP,
+    });
+    if (!result) return [];
+    const best = result.recommendations[0];
+    if (!best) return [];
+    const baseText = `${result.medicationName} ${best.route} ${best.dose.quantity} ${best.dose.unit}`;
+    if (overrides?.default && typeof context.systolicBP === "number" && context.systolicBP < 90 && overrides.hold) {
+      return [overrides.hold];
+    }
+    if (overrides?.default) return [overrides.default];
+    return [`${baseText}${best.repeat ? `; repeat ${best.repeat.intervalMinutes} min` : ""}`];
+  }
+
+  private buildMedicationDetails(
+    input: Array<{ id: string; scenario?: string; sbp?: number }>,
+    patientWeightKg?: number,
+  ): { details: Array<{ name: string; details: string[]; citations: string[] }>; weightBased?: CarePlan["weightBased"] } {
+    const rows: Array<{ name: string; details: string[]; citations: string[] }> = [];
+
+    for (const item of input) {
+      const result = this.medicationManager.calculate(item.id, {
+        patientWeightKg,
+        scenario: item.scenario,
+        systolicBP: item.sbp,
+      });
+      if (!result) continue;
+
+      const details = result.recommendations.map((rec) => formatRecommendation(result, rec));
+      rows.push({ name: result.medicationName, details, citations: result.citations });
+
+      // If future calculators expose structured weight-based guidance,
+      // we can extend MedicationCalculationResult and surface it here.
+    }
+
+    return { details: rows };
+  }
+}
+
+function formatRecommendation(result: MedicationCalculationResult, rec: MedicationCalculationResult["recommendations"][number]): string {
+  const dose = `${rec.dose.quantity} ${rec.dose.unit}`;
+  const repeat = rec.repeat ? `; repeat ${rec.repeat.intervalMinutes} min` : "";
+  return `${result.medicationName} ${rec.route} ${dose}${repeat}`;
 }
 
 

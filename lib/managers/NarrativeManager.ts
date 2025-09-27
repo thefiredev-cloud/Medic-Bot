@@ -5,7 +5,7 @@ export type NarrativeSection = {
 };
 
 export type NarrativeDraft = {
-  template: "SOAP" | "Chronological" | "Trauma" | "Cardiac" | "Pediatric";
+  template: "SOAP" | "Chronological" | "Trauma" | "Cardiac" | "Pediatric" | "Timeline";
   sections: NarrativeSection[];
 };
 
@@ -19,6 +19,12 @@ export type NarrativeInput = {
   disposition?: string;      // transport/destination
   history?: string[];        // SAMPLE-style history elements (Allergies, Meds, etc.)
   assessment?: string[];     // impressions, protocol rationale, differentials
+  timeline?: Array<{
+    time?: string;
+    event: string;
+    type?: "assessment" | "intervention" | "vital" | "medication" | "note";
+  }>;
+  weightBased?: Array<{ medication: string; dose: string; citation?: string }>;
 };
 
 // NEMSIS-aligned (simplified) structure
@@ -74,23 +80,53 @@ export class NarrativeManager {
     sections.push({ title: "Assessment", lines: input.assessment ?? [] });
     const plan = this.buildPlan(input);
     if (plan) sections.push(plan);
+    const weighting = this.buildWeightSection(input);
+    if (weighting) sections.push(weighting);
     return { template: "SOAP", sections };
   }
 
   public buildChronological(input: NarrativeInput): NarrativeDraft {
-    const S: NarrativeSection[] = [];
+    const core = this.buildChronologicalCore(input);
+    const weighting = this.buildWeightSection(input);
+    return { template: "Chronological", sections: weighting ? [core, weighting] : [core] };
+  }
+
+  private buildChronologicalCore(input: NarrativeInput): NarrativeSection {
     const lines: string[] = [];
-    if (input.demographics?.length) lines.push(`Demo: ${input.demographics.join(", ")}`);
-    if (input.chiefComplaint) lines.push(`CC: ${input.chiefComplaint}`);
-    if (input.history?.length) lines.push(...input.history.map(h => `Hx: ${h}`));
-    if (input.exam?.length) lines.push(...input.exam.map(e => `Exam: ${e}`));
-    if (input.vitals?.length) lines.push(...input.vitals.map(v => `Vitals: ${v}`));
-    if (input.assessment?.length) lines.push(...input.assessment.map(a => `Assessment: ${a}`));
-    if (input.interventions?.length) lines.push(...input.interventions.map(i => `Tx: ${i}`));
-    if (input.baseContact) lines.push(`Base: ${input.baseContact}`);
-    if (input.disposition) lines.push(`Disposition: ${input.disposition}`);
-    S.push({ title: "Chronological", lines });
-    return { template: "Chronological", sections: S };
+    this.pushIf(lines, input.demographics?.length ? `Demo: ${input.demographics.join(", ")}` : undefined);
+    this.pushIf(lines, input.chiefComplaint ? `CC: ${input.chiefComplaint}` : undefined);
+    this.pushMany(lines, input.history, (h) => `Hx: ${h}`);
+    this.pushMany(lines, input.exam, (e) => `Exam: ${e}`);
+    this.pushMany(lines, input.vitals, (v) => `Vitals: ${v}`);
+    this.pushMany(lines, input.assessment, (a) => `Assessment: ${a}`);
+    this.pushMany(lines, input.interventions, (i) => `Tx: ${i}`);
+    this.pushIf(lines, input.baseContact ? `Base: ${input.baseContact}` : undefined);
+    this.pushIf(lines, input.disposition ? `Disposition: ${input.disposition}` : undefined);
+    return { title: "Chronological", lines };
+  }
+
+  private pushIf(lines: string[], value?: string) {
+    if (value) lines.push(value);
+  }
+
+  private pushMany<T>(lines: string[], items: T[] | undefined, map: (item: T) => string) {
+    if (!items?.length) return;
+    for (const item of items) lines.push(map(item));
+  }
+
+  public buildTimeline(input: NarrativeInput): NarrativeDraft {
+    const section: NarrativeSection = {
+      title: "Timeline",
+      lines: (input.timeline || []).map((entry) =>
+        entry.time
+          ? `${entry.time} – ${entry.event}`
+          : entry.event,
+      ),
+    };
+    const sections: NarrativeSection[] = [section];
+    const weighting = this.buildWeightSection(input);
+    if (weighting) sections.push(weighting);
+    return { template: "Timeline", sections };
   }
 
   public buildNemsis(input: NarrativeInput): NemsisNarrative {
@@ -118,6 +154,14 @@ export class NarrativeManager {
       eDisposition: {},
       baseContact: input.baseContact ? { summary: input.baseContact } : undefined,
     };
+  }
+
+  private buildWeightSection(input: NarrativeInput): NarrativeSection | null {
+    if (!input.weightBased?.length) return null;
+    const lines = input.weightBased.map((entry) =>
+      `${entry.medication}: ${entry.dose}${entry.citation ? ` (${entry.citation})` : ""}`,
+    );
+    return { title: "Weight-Based Dosing", lines };
   }
 }
 

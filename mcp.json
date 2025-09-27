@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-09-26T21:23:31.144Z",
+  "note": "Saved at user request: full context window not captured verbatim for safety; includes repo state and high-level summary.",
+  "files": [
+    ".DS_Store",
+    ".env",
+    ".env.example",
+    ".eslintrc.cjs",
+    ".git",
+    ".github",
+    ".gitignore",
+    ".husky",
+    ".next",
+    ".nvmrc",
+    "PDFs",
+    "README.md",
+    "app",
+    "data",
+    "docs",
+    "lib",
+    "mcp.json",
+    "netlify.toml",
+    "next-env.d.ts",
+    "next.config.js",
+    "node_modules",
+    "package-lock.json",
+    "package.json",
+    "playwright.config.ts",
+    "project-reference.md",
+    "public",
+    "scripts",
+    "tests",
+    "tools",
+    "tsconfig.json",
+    "tsconfig.tsbuildinfo",
+    "vitest.config.ts"
+  ],
+  "features": {
+    "dosing": true,
+    "guardrails": true,
+    "retrieval": true
+  }
+}

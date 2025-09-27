@@ -1,6 +1,7 @@
+/* eslint-disable simple-import-sort/imports */
 import { createLogger } from "@/lib/log";
-import { EnvironmentManager } from "@/lib/managers/environment-manager";
-import { KnowledgeBaseManager } from "@/lib/storage/knowledge-base-manager";
+import { EnvironmentManager, type EnvironmentDiagnostics } from "@/lib/managers/environment-manager";
+import { KnowledgeBaseManager, type KnowledgeBaseResolutionAttempt, type KnowledgeBaseResolvedSource } from "@/lib/storage/knowledge-base-manager";
 
 type KnowledgeBaseStatus = {
   loaded: boolean;
@@ -8,20 +9,33 @@ type KnowledgeBaseStatus = {
   sourcePath?: string;
 };
 
+export type KnowledgeBaseDiagnostics = KnowledgeBaseStatus & {
+  env: EnvironmentDiagnostics;
+  lastSource: KnowledgeBaseResolvedSource | null;
+  attempts: ReadonlyArray<KnowledgeBaseResolutionAttempt>;
+};
+
 class KnowledgeBaseInitializer {
   private status: KnowledgeBaseStatus = { loaded: false, docCount: 0 };
-  private readonly manager: KnowledgeBaseManager;
+  private manager: KnowledgeBaseManager | null;
   private readonly logger = createLogger("KnowledgeBaseInitializer");
 
-  constructor(manager = new KnowledgeBaseManager()) {
-    this.manager = manager;
+  constructor(manager?: KnowledgeBaseManager) {
+    this.manager = manager ?? null;
+  }
+
+  private getManager(): KnowledgeBaseManager {
+    if (!this.manager) {
+      this.manager = new KnowledgeBaseManager();
+    }
+    return this.manager;
   }
 
   public async warm(): Promise<KnowledgeBaseStatus> {
     if (this.status.loaded) return this.status;
 
     const env = EnvironmentManager.load();
-    const docs = await this.manager.load();
+    const docs = await this.getManager().load();
     this.status = {
       loaded: true,
       docCount: docs.length,
@@ -36,6 +50,23 @@ class KnowledgeBaseInitializer {
 
   public getStatus(): KnowledgeBaseStatus {
     return this.status;
+  }
+
+  public statusWithEnvironment(): KnowledgeBaseDiagnostics {
+    const diagnostics = EnvironmentManager.diagnostics();
+    const resolution = KnowledgeBaseManager.resolutionDiagnostics();
+    return {
+      ...this.status,
+      env: diagnostics,
+      lastSource: resolution.lastSource,
+      attempts: resolution.attempts,
+    };
+  }
+
+  public reset(): void {
+    this.status = { loaded: false, docCount: 0 };
+    this.manager = null;
+    KnowledgeBaseManager.clear();
   }
 }
 

@@ -10,13 +10,17 @@ import { useSendHandler } from "@/app/hooks/use-send-handler";
 import { useVoiceInput } from "@/app/hooks/use-voice-input";
 import type { ChatMessage } from "@/app/types/chat";
 
-async function requestChat(payload: unknown) {
-  const response = await fetch("/api/chat", {
+async function requestChat(payload: unknown, options?: { stream?: boolean }) {
+  const endpoint = options?.stream ? "/api/chat/stream" : "/api/chat";
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error(await response.text());
+  if (options?.stream) {
+    return response.body as ReadableStream<Uint8Array>;
+  }
   return response.json();
 }
 
@@ -102,6 +106,7 @@ function useChatHandlersConfig({ chat, narrative, refs, appendAssistant, handler
     handleOrders: handlers.handleOrders,
     request: requestChat,
     setErrorBanner,
+    enableStreaming: true,
   });
 
   const buildNarrative = useBuildNarrative({

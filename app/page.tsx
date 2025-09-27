@@ -1,4 +1,6 @@
 "use client";
+import { useCallback } from "react";
+
 import { ChatInputRow } from "@/app/components/chat-input-row";
 import { ChatList } from "@/app/components/chat-list";
 import { NarrativePanel } from "@/app/components/narrative-panel";
@@ -9,16 +11,25 @@ function initialAssistantMessage(): ChatMessage {
   return {
     role: "assistant",
     content:
-      "I'm EmergiBot. Tell me what you see? What do you know?\n\nI’m limited to the Los Angeles County Prehospital Care Manual. Reference an LA County protocol, provider impression, or describe the chief complaint so I can map it to the appropriate protocol.",
+      "Welcome. Tell me what you see and what you know.\n\nI use the Los Angeles County Prehospital Care Manual. Reference a protocol, provider impression, or chief complaint so I can map it to the appropriate guidance.",
   };
 }
 
 function ChatExperience({ controller }: { controller: ReturnType<typeof usePageController> }) {
+  const handleExampleSelect = useCallback(
+    (value: string) => {
+      controller.chat.setInput(value);
+      controller.taRef.current?.focus();
+    },
+    [controller.chat, controller.taRef],
+  );
+
   return (
     <div className="container">
       <ChatList
         messages={controller.chat.messages}
         onProtocolSelect={controller.sendProtocolSelection}
+        onExampleSelect={handleExampleSelect}
         errorBanner={controller.errorBanner}
       />
       <NarrativePanel
@@ -28,6 +39,7 @@ function ChatExperience({ controller }: { controller: ReturnType<typeof usePageC
         carePlan={controller.narrative.carePlan}
         citations={controller.narrative.citations}
         recentOrders={controller.narrative.recentOrders}
+        onBuildNarrative={controller.buildNarrative}
       />
       <div ref={controller.endRef} />
       <ChatInputRow

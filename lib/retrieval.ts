@@ -12,6 +12,79 @@ export type KBDoc = {
   content: string;
 };
 
+type SynonymRule = {
+  patterns: RegExp[];
+  expansions: string[];
+};
+
+const SYNONYM_RULES: readonly SynonymRule[] = [
+  {
+    patterns: [
+      /\bsodium\s*bi\s*carb\b/,
+      /\bbicarb\b/,
+      /\bbi\s*carb\b/,
+      /\bnahco3\b/,
+    ],
+    expansions: ["sodium bicarbonate"],
+  },
+  {
+    patterns: [/\bcrush\b/],
+    expansions: ["crush injury 1242", "crush syndrome", "hyperkalemia", "sodium bicarbonate"],
+  },
+  {
+    patterns: [/\b(tca|tricyclic)\b/],
+    expansions: ["tricyclic overdose", "qrs widening", "sodium bicarbonate"],
+  },
+  {
+    patterns: [/\bhyperk\b/, /\bhyperkalemi\w*/],
+    expansions: ["hyperkalemia", "sodium bicarbonate", "cardiac arrest", "bradycardia"],
+  },
+  {
+    patterns: [/\bdialysis\b/, /\brenal failure\b/, /\bckd\b/],
+    expansions: ["hyperkalemia", "sodium bicarbonate"],
+  },
+  {
+    patterns: [/\bpeaked\s*t\s*waves?\b/],
+    expansions: ["hyperkalemia", "sodium bicarbonate"],
+  },
+  {
+    patterns: [/\bbronchospasm\b/, /\bcopd\b/, /\basthma\b/, /\bwheez(?:e|ing)\b/, /\brespiratory distress\b/],
+    expansions: ["shortness of breath", "protocol 1231", "protocol 1233", "albuterol", "nebulizer"],
+  },
+  {
+    patterns: [/\banaphylaxis\b/, /\ballergic reaction\b/],
+    expansions: ["protocol 1230", "epinephrine", "diphenhydramine"],
+  },
+  {
+    patterns: [/\bseizure\b/, /\bpostictal\b/, /\bstatus epilepticus\b/],
+    expansions: ["protocol 1239", "benzodiazepine", "midazolam", "diazepam"],
+  },
+  {
+    patterns: [/\bstemi\b/, /\bchest pain\b/, /\bacs\b/, /\bmyocardial infarction\b/],
+    expansions: ["protocol 1211", "nitroglycerin", "aspirin"],
+  },
+  {
+    patterns: [/\bstroke\b/, /\bcva\b/, /\btia\b/, /\bmLAPSS\b/, /\blams\b/],
+    expansions: ["protocol 1232", "stroke assessment", "base contact"],
+  },
+  {
+    patterns: [/\btrauma\b/, /\bmvc\b/, /\bmechanism\b/, /\bblunt\b/, /\bpenetrating\b/],
+    expansions: ["protocol 1305", "trauma triage", "base contact"],
+  },
+  {
+    patterns: [/\boverdose\b/, /\bpoison\b/, /\bingestion\b/, /\bopioid\b/, /\bnaloxone\b/],
+    expansions: ["protocol 1229", "protocol 1235", "naloxone", "activated charcoal"],
+  },
+  {
+    patterns: [/\bbehavioral\b/, /\bagitation\b/, /\bpsych\b/],
+    expansions: ["protocol 1231", "protocol 1237", "midazolam"],
+  },
+  {
+    patterns: [/\bpediatric\b/, /\bchild\b/, /\bnewborn\b/, /\bneonate\b/],
+    expansions: ["MCG 1309", "color code", "weight based", "pediatric doses"],
+  },
+];
+
 let index: MiniSearch<KBDoc> | null = null;
 let kbDocs: KBDoc[] | null = null;
 
@@ -56,53 +129,22 @@ function applyQueryNormalization(query: string): string {
   return query.replace(/\s+/g, " ").trim();
 }
 
-function augmentQueryWithSynonyms(originalQuery: string): string {
+export function augmentQueryWithSynonyms(originalQuery: string): string {
   const normalized = applyQueryNormalization(originalQuery);
   const lower = normalized.toLowerCase();
-  const expansions: string[] = [];
+  const expansions = new Set<string>();
 
-  const addIf = (regexes: RegExp[], canonical: string) => {
-    if (regexes.some((r) => r.test(lower))) expansions.push(canonical);
-  };
-
-  addIf([
-    /\bsodium\s*bi\s*carb\b/,
-    /\bbicarb\b/,
-    /\bbi\s*carb\b/,
-    /\bnahco3\b/,
-  ], "sodium bicarbonate");
-
-  const mentionsCrush = /\bcrush\b/.test(lower);
-  const mentionsTCA = /\b(tca|tricyclic)\b/.test(lower);
-  const mentionsHyperK = /\b(hyperk|hyperkalemi\w*)\b/.test(lower);
-  const mentionsDialysis = /\bdialysis|renal failure|ckd\b/.test(lower);
-  const peakedT = /\bpeaked\s*t\s*waves?\b/.test(lower);
-
-  if (mentionsCrush) {
-    expansions.push(
-      "crush injury 1242",
-      "crush syndrome",
-      "hyperkalemia",
-      "sodium bicarbonate",
-    );
-  }
-  if (mentionsTCA) {
-    expansions.push(
-      "tricyclic overdose",
-      "qrs widening",
-      "sodium bicarbonate",
-    );
-  }
-  if (mentionsHyperK || mentionsDialysis || peakedT) {
-    expansions.push(
-      "hyperkalemia",
-      "sodium bicarbonate",
-      "cardiac arrest",
-      "bradycardia",
-    );
-  }
+  SYNONYM_RULES.forEach((rule) => {
+    const matched = rule.patterns.some((pattern) => pattern.test(lower));
+    if (!matched) return;
+    rule.expansions.forEach((expansion) => expansions.add(expansion));
+  });
 
   return [normalized, ...expansions].join(" ").trim();
+}
+
+export function expandQueryForTesting(query: string): string {
+  return augmentQueryWithSynonyms(query);
 }
 
 function isPCMDoc(d: KBDoc): boolean {
@@ -128,20 +170,16 @@ export async function searchKB(query: string, limit = 6): Promise<KBDoc[]> {
   const docs = getLoadedKB();
   const expanded = augmentQueryWithSynonyms(query);
   const results = index!.search(expanded, { combineWith: "OR" }).slice(0, limit) as unknown as SearchHit[];
-  const mapped = results
-    .map((r: SearchHit) => docs.find(d => d.id === r.id))
-    .filter(Boolean) as KBDoc[];
-  
-  // Debug logging (disabled in production)
-  // if (process.env.NODE_ENV !== 'production' && (query.toLowerCase().includes('mcg') || query.toLowerCase().includes('1309'))) {
-  //   console.log('MCG 1309 Query:', query);
-  //   console.log('Search results:', results.length);
-  //   console.log('Mapped results:', mapped.length);
-  //   if (mapped.length > 0) {
-  //     console.log('First result:', mapped[0].title);
-  //   }
-  // }
-  
+  const mapped = mapSearchResults(results, docs);
+  return augmentWithRelatedDocs(query, mapped, docs);
+}
+
+function mapSearchResults(results: SearchHit[], docs: KBDoc[]): KBDoc[] {
+  const mapped: KBDoc[] = [];
+  for (const r of results) {
+    const found = docs.find((d) => d.id === r.id);
+    if (found) mapped.push(found);
+  }
   return mapped;
 }
 
@@ -194,4 +232,44 @@ function buildKBChunks(hits: KBDoc[]): string[] {
     const trimmed = d.content.length > 1400 ? d.content.slice(0, 1400) + " …" : d.content;
     return `#${i + 1} • ${d.title} [${d.category}${d.subcategory ? " / " + d.subcategory : ""}]\n${trimmed}`;
   });
+}
+
+function augmentWithRelatedDocs(query: string, hits: KBDoc[], allDocs: KBDoc[]): KBDoc[] {
+  const augmented: KBDoc[] = [...hits];
+  const lowerQuery = query.toLowerCase();
+
+  const ensureDoc = (predicate: (doc: KBDoc) => boolean, priority = false) => {
+    const existing = augmented.find(predicate);
+    if (existing) return;
+    const found = allDocs.find(predicate);
+    if (found) {
+      if (priority) augmented.unshift(found);
+      else augmented.push(found);
+    }
+  };
+
+  // Ensure protocol documents for any protocol codes mentioned in the query
+  const protocolMatches = Array.from(new Set(Array.from(lowerQuery.matchAll(/\b(1[0-3]\d{2})\b/g)).map((match) => match[1])));
+  for (const code of protocolMatches) {
+    ensureDoc((doc) => doc.title.toLowerCase().includes(code));
+  }
+
+  // If the query or existing hits suggest medication guidance, ensure MCG 1309 is present
+  const mentionsMedication =
+    /\b(dose|dosing|mg|mcg|medication|meds|epinephrine|epi|albuterol|ketorolac|acetaminophen|midazolam|fentanyl|pediatric|weight)\b/.test(
+      lowerQuery,
+    ) || hits.some((hit) => hit.category.toLowerCase().includes("medication"));
+  if (mentionsMedication) {
+    ensureDoc(
+      (doc) => (doc.subcategory || "").toLowerCase().includes("mcg 1309") || doc.title.toLowerCase().includes("mcg 1309"),
+      true,
+    );
+  }
+
+  // Include base contact guidance when requested explicitly
+  if (lowerQuery.includes("base contact")) {
+    ensureDoc((doc) => doc.title.toLowerCase().includes("base contact"));
+  }
+
+  return augmented;
 }

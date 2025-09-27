@@ -152,7 +152,12 @@ function parseChiefComplaint(text: string): { cc?: string; painLocation?: string
     return { cc: "abdominal pain", painLocation: painLoc };
   }
   if (/\b(chest pain|cp)\b/.test(lower)) return { cc: "chest pain" };
-  if (/\b(short(ness)? of breath|sob|dyspnea|wheez(?:e|ing))\b/.test(lower)) return { cc: "shortness of breath" };
+  if (/\b(asthma|bronchospasm|copd)\b/.test(lower)) {
+    return { cc: "asthma" };
+  }
+  if (/\b(short(ness)? of breath|sob|dyspnea|wheez(?:e|ing))\b/.test(lower)) {
+    return { cc: "shortness of breath" };
+  }
   if (/\bstroke|cva|tia|facial droop\b/.test(lower)) return { cc: "stroke" };
   if (/\bseizure|postictal\b/.test(lower)) return { cc: "seizure" };
   if (/\bsyncope|faint(?:ed|ing)|passed out\b/.test(lower)) return { cc: "syncope" };

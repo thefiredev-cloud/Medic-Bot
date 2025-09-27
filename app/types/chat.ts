@@ -77,6 +77,18 @@ export type CarePlan = {
   baseContact: string;
   basicMedications: string[];
   criticalNotes: string[];
+  medicationsDetailed?: Array<{
+    name: string;
+    details: string[];
+    citations: string[];
+  }>;
+  weightBased?: Array<{
+    name: string;
+    route: string;
+    dosePerKg: string;
+    range: string;
+    citations: string[];
+  }>;
 };
 
 export type Citation = {

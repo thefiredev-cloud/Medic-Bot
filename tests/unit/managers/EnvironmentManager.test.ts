@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { EnvironmentManager } from "@/lib/managers/environment-manager";
 
@@ -23,6 +23,19 @@ describe("EnvironmentManager", () => {
     expect(env.llmBaseUrl).toBe("https://example.com");
     expect(env.llmModel).toBe("gpt-test");
     expect(env.kbScope).toBe("pcm");
+  });
+
+  it("returns diagnostics snapshot without leaking secrets", () => {
+    EnvironmentManager.load();
+    const diagnostics = EnvironmentManager.diagnostics();
+
+    expect(diagnostics.nodeEnv).toBe("test");
+    expect(diagnostics.llm.baseUrl).toBe("https://example.com");
+    expect(diagnostics.llm.model).toBe("gpt-test");
+    expect(diagnostics.llm.apiKeyConfigured).toBe(true);
+    expect(diagnostics.knowledgeBase.scope).toBe("pcm");
+    expect(diagnostics.knowledgeBase.source).toBe("clean");
+    expect(diagnostics.knowledgeBase.dataPath).toBeUndefined();
   });
 
   it("throws when required values missing", () => {

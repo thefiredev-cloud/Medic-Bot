@@ -12,6 +12,27 @@ export type KnowledgeBaseAsset = {
   content: string;
 };
 
+export type KnowledgeBaseSourceKind = "local" | "remote";
+
+export type KnowledgeBaseResolvedSource = {
+  kind: KnowledgeBaseSourceKind;
+  location: string;
+};
+
+export type KnowledgeBaseResolutionAttempt = KnowledgeBaseResolvedSource & {
+  success: boolean;
+};
+
+export type KnowledgeBaseResolutionDiagnostics = {
+  lastSource: KnowledgeBaseResolvedSource | null;
+  attempts: ReadonlyArray<KnowledgeBaseResolutionAttempt>;
+};
+
+type KnowledgeBaseResolutionState = {
+  lastSource: KnowledgeBaseResolvedSource | null;
+  attempts: KnowledgeBaseResolutionAttempt[];
+};
+
 type KnowledgeBaseSourceOptions = {
   absolutePath?: string;
   remoteUrl?: string;
@@ -19,6 +40,7 @@ type KnowledgeBaseSourceOptions = {
 
 export class KnowledgeBaseManager {
   private static cache: KnowledgeBaseAsset[] | null = null;
+  private static resolutionState: KnowledgeBaseResolutionState = { lastSource: null, attempts: [] };
   private readonly options?: KnowledgeBaseSourceOptions;
   private readonly env = EnvironmentManager.load();
 
@@ -35,6 +57,14 @@ export class KnowledgeBaseManager {
 
   public static clear(): void {
     KnowledgeBaseManager.cache = null;
+    KnowledgeBaseManager.resolutionState = { lastSource: null, attempts: [] };
+  }
+
+  public static resolutionDiagnostics(): KnowledgeBaseResolutionDiagnostics {
+    return {
+      lastSource: KnowledgeBaseManager.resolutionState.lastSource,
+      attempts: [...KnowledgeBaseManager.resolutionState.attempts],
+    };
   }
 
   private async resolveAssets(): Promise<KnowledgeBaseAsset[]> {
@@ -89,11 +119,23 @@ export class KnowledgeBaseManager {
     return path.isAbsolute(candidate) ? candidate : path.join(process.cwd(), candidate);
   }
 
+  private static recordAttempt(kind: KnowledgeBaseSourceKind, location: string, success: boolean): void {
+    const attempts = KnowledgeBaseManager.resolutionState.attempts;
+    attempts.push({ kind, location, success });
+    if (attempts.length > 20) attempts.splice(0, attempts.length - 20);
+    if (success) {
+      KnowledgeBaseManager.resolutionState.lastSource = { kind, location };
+    }
+  }
+
   private async tryLoadFromDisk(candidate: string): Promise<KnowledgeBaseAsset[] | null> {
     try {
       const payload = await fs.readFile(candidate, "utf8");
-      return JSON.parse(payload) as KnowledgeBaseAsset[];
+      const parsed = JSON.parse(payload) as KnowledgeBaseAsset[];
+      KnowledgeBaseManager.recordAttempt("local", candidate, true);
+      return parsed;
     } catch (error: unknown) {
+      KnowledgeBaseManager.recordAttempt("local", candidate, false);
       if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return null;
       throw error instanceof Error ? error : new Error(String(error));
     }
@@ -102,11 +144,16 @@ export class KnowledgeBaseManager {
   private async tryLoadFromRemote(url: string): Promise<KnowledgeBaseAsset[] | null> {
     try {
       const response = await fetch(url, { cache: "force-cache" });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        KnowledgeBaseManager.recordAttempt("remote", url, false);
+        return null;
+      }
       const json = await response.json();
+      KnowledgeBaseManager.recordAttempt("remote", url, true);
       return json as KnowledgeBaseAsset[];
     } catch (error: unknown) {
       // If remote fetch fails (e.g., offline build) swallow and fall back.
+      KnowledgeBaseManager.recordAttempt("remote", url, false);
       console.warn(`[KB] Remote fetch failed for ${url}:`, error);
       return null;
     }

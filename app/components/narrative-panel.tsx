@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback } from "react";
+
 import type { CarePlan, Citation, NarrativeDraft, NemsisNarrative } from "@/app/types/chat";
 
 function SectionCard({ title, items }: { title: string; items: string[] }) {
@@ -71,14 +73,104 @@ function NemsisSection({ nemsis }: { nemsis: NemsisNarrative }) {
 
 function CarePlanSection({ carePlan }: { carePlan: CarePlan }) {
   return (
-    <div style={{ marginBottom: "16px" }}>
-      <h3>
-        Care Plan – {carePlan.protocolCode} {carePlan.protocolTitle}
-      </h3>
-      <SectionCard title="Actions" items={carePlan.actions} />
-      <SectionCard title="Basic Medications" items={carePlan.basicMedications} />
-      <SectionCard title="Critical Notes" items={carePlan.criticalNotes} />
-      <div style={{ marginTop: "8px", fontWeight: "bold" }}>Base Contact: {carePlan.baseContact}</div>
+    <section className="panel-section">
+      <h2>Care Plan</h2>
+      <p>
+        Protocol {carePlan.protocolCode} – {carePlan.protocolTitle}
+      </p>
+      <h3>Actions</h3>
+      <ul>
+        {carePlan.actions.map((action, index) => (
+          <li key={index}>{action}</li>
+        ))}
+      </ul>
+      <h3>Medications</h3>
+      <ul>
+        {carePlan.basicMedications.map((medication, index) => (
+          <li key={index}>{medication}</li>
+        ))}
+      </ul>
+      {carePlan.medicationsDetailed?.length ? (
+        <MedicationDetailsTable details={carePlan.medicationsDetailed} />
+      ) : null}
+      {carePlan.weightBased?.length ? (
+        <WeightBasedTable weightBased={carePlan.weightBased} />
+      ) : null}
+      {carePlan.criticalNotes.length ? (
+        <>
+          <h3>Critical Notes</h3>
+          <ul>
+            {carePlan.criticalNotes.map((note, index) => (
+              <li key={index}>{note}</li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      <h3>Base Contact</h3>
+      <p>{carePlan.baseContact}</p>
+    </section>
+  );
+}
+
+function MedicationDetailsTable({
+  details,
+}: {
+  details: NonNullable<CarePlan["medicationsDetailed"]>;
+}) {
+  return (
+    <table className="medication-table">
+      <thead>
+        <tr>
+          <th>Medication</th>
+          <th>Details</th>
+          <th>Citations</th>
+        </tr>
+      </thead>
+      <tbody>
+        {details.map((row) => (
+          <tr key={row.name}>
+            <td>{row.name}</td>
+            <td>
+              <ul>
+                {row.details.map((detail, index) => (
+                  <li key={index}>{detail}</li>
+                ))}
+              </ul>
+            </td>
+            <td>{row.citations.join(", ")}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function WeightBasedTable({ weightBased }: { weightBased: NonNullable<CarePlan["weightBased"]> }) {
+  return (
+    <div className="weight-table">
+      <h3>Weight-Based Dosing (MCG 1309)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Medication</th>
+            <th>Route</th>
+            <th>Dose / kg</th>
+            <th>Range</th>
+            <th>Citations</th>
+          </tr>
+        </thead>
+        <tbody>
+          {weightBased.map((entry) => (
+            <tr key={`${entry.name}-${entry.route}`}>
+              <td>{entry.name}</td>
+              <td>{entry.route}</td>
+              <td>{entry.dosePerKg}</td>
+              <td>{entry.range}</td>
+              <td>{entry.citations.join(", ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -99,11 +191,19 @@ function CitationsSection({ citations }: { citations: Citation[] }) {
   );
 }
 
-function EmptyNarrativeState() {
+function EmptyNarrativeState({ onBuild }: { onBuild?: () => void }) {
   return (
-    <div className="narrative-panel" style={{ marginTop: "16px", fontStyle: "italic", color: "var(--muted)" }}>
-      Provide patient details (chief complaint, vitals, interventions) and try “Build Narrative” again to auto-fill
-      documentation.
+    <div
+      className="narrative-panel"
+      style={{ marginTop: "16px", color: "var(--muted)", display: "flex", alignItems: "center", gap: "12px" }}
+    >
+      <span>
+        Provide patient details (chief complaint, vitals, interventions) and try Build Narrative again to auto-fill
+        documentation.
+      </span>
+      <button type="button" onClick={onBuild} style={{ padding: "6px 12px" }}>
+        Build Narrative
+      </button>
     </div>
   );
 }
@@ -146,6 +246,7 @@ export function NarrativePanel({
   carePlan,
   citations,
   recentOrders,
+  onBuildNarrative,
 }: {
   soap?: NarrativeDraft;
   chronological?: NarrativeDraft;
@@ -153,10 +254,14 @@ export function NarrativePanel({
   carePlan?: CarePlan | null;
   citations?: Citation[];
   recentOrders?: string[];
+  onBuildNarrative?: () => Promise<void>;
 }) {
   const candidates = buildCandidates({ soap, chronological, nemsis, carePlan, citations, recentOrders });
   const sections = candidates.filter((candidate) => candidate.shouldRender && candidate.node !== null);
-  if (!sections.length) return <EmptyNarrativeState />;
+  const handleBuild = useCallback(() => {
+    void onBuildNarrative?.();
+  }, [onBuildNarrative]);
+  if (!sections.length) return <EmptyNarrativeState onBuild={handleBuild} />;
 
   return (
     <div className="narrative-panel" style={{ marginTop: "16px" }}>
