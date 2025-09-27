@@ -8,9 +8,9 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const logger = createLogger("api.health");
-  EnvironmentManager.load();
 
   try {
+    EnvironmentManager.load();
     const status = await knowledgeBaseInitializer.warm();
     const diagnostics = knowledgeBaseInitializer.statusWithEnvironment();
     return NextResponse.json({
