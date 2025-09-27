@@ -12,6 +12,7 @@ import { ResearchManager } from "@/lib/managers/ResearchManager";
 import { RetrievalManager } from "@/lib/managers/RetrievalManager";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import type { KBDoc } from "@/lib/retrieval";
+import { initializeKnowledgeBase } from "@/lib/retrieval";
 import type { TriageResult } from "@/lib/triage";
 import { buildSearchAugmentation, buildTriageContext, triageInput } from "@/lib/triage";
 
@@ -58,6 +59,7 @@ export class ChatService {
 
   public async warm(): Promise<void> {
     await knowledgeBaseInitializer.warm();
+    await initializeKnowledgeBase();
   }
 
   public async handle({ messages, mode }: ChatRequest): Promise<ChatResponse> {

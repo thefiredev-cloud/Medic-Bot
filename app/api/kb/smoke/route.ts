@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { knowledgeBaseInitializer } from "@/lib/managers/knowledge-base-initializer";
-import { searchKB } from "@/lib/retrieval";
+import { initializeKnowledgeBase, searchKB } from "@/lib/retrieval";
 
 const CHECKS = [
   { query: "MCG 1309", description: "Medication dosing guideline" },
@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const status = await knowledgeBaseInitializer.warm();
+  await initializeKnowledgeBase();
   const checks = await Promise.all(
     CHECKS.map(async (check) => {
       const hits = await searchKB(check.query, 5);

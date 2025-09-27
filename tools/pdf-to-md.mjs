@@ -2,8 +2,8 @@
 
 // Convert all PDFs to Markdown alongside each PDF
 // Usage:
-//   node tools/pdf-to-md.js                 # converts ./PDFs
-//   node tools/pdf-to-md.js ./PDFs /path/other/PDFs
+//   node tools/pdf-to-md.mjs                 # converts ./PDFs
+//   node tools/pdf-to-md.mjs ./PDFs /path/other/PDFs
 
 import fs from "fs";
 import * as fsp from "fs/promises";
@@ -29,7 +29,7 @@ async function* walk(dir) {
     const full = path.join(dir, e.name);
     if (e.isDirectory()) {
       yield* walk(full);
-    } else if (e.isFile() && /\.pdf$/i.test(e.name)) {
+    } else if (e.isFile() && \/\.pdf$\/i.test(e.name)) {
       yield full;
     }
   }

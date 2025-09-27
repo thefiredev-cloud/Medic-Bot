@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 
 import { createLogger } from "@/lib/log";
 import { ChatService } from "@/lib/managers/chat-service";
@@ -8,7 +9,7 @@ import { prepareChatRequest } from "./shared";
 
 export async function POST(req: NextRequest) {
   const start = Date.now();
-  const requestId = crypto.randomUUID();
+  const requestId = randomUUID();
   const logger = createLogger("api.chat.post");
 
   const prepared = await prepareChatRequest(req);

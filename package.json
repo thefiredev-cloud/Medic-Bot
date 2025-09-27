@@ -1,7 +1,6 @@
 {
   "name": "EMS Bot",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,7 +12,7 @@
     "test:integration": "vitest run --dir tests/integration",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "smoke": "node scripts/smoke.js",
+    "smoke": "node scripts/smoke.mjs",
     "prepare": "husky install",
     "build:netlify": "npx -y netlify-cli link --id $NETLIFY_SITE_ID && npx -y netlify-cli env:pull --environment=production --yes && npx -y netlify-cli build --context production",
     "ingest:pdfs": "node scripts/ingest-pdfs.cjs",
