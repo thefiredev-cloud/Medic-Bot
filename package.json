@@ -26,6 +26,7 @@
     "export:kb:clean": "node scripts/export-clean-kb.cjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.67.0",
     "idb": "^8.0.3",
     "lucide-react": "^0.545.0",
     "minisearch": "^7.1.0",

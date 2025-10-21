@@ -57,7 +57,7 @@ export class ChatService {
   constructor(llmClient?: LLMClient) {
     this.llmClient = llmClient ?? new LLMClient({
       baseUrl: this.env.llmBaseUrl,
-      apiKey: this.env.LLM_API_KEY,
+      apiKey: this.env.llmApiKey,
       maxRetries: 0,
       timeoutMs: 2_000,
       // Explicitly inject global fetch so tests can spy on it reliably

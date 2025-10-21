@@ -3,8 +3,14 @@ import { z } from "zod";
 const schema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   LLM_API_KEY: z
-    .string({ required_error: "LLM_API_KEY is required" })
-    .min(1, { message: "LLM_API_KEY is required" }),
+    .string({ required_error: "LLM_API_KEY or ANTHROPIC_API_KEY is required" })
+    .min(1, { message: "LLM_API_KEY or ANTHROPIC_API_KEY is required" })
+    .optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  LLM_PROVIDER: z
+    .enum(["openai", "anthropic"])
+    .default("openai")
+    .transform((value) => value.toLowerCase() as "openai" | "anthropic"),
   LLM_BASE_URL: z.string().url("LLM_BASE_URL must be a valid URL").optional(),
   LLM_MODEL: z.string().min(1).default("gpt-4o-mini"),
   KB_SCOPE: z
@@ -27,8 +33,10 @@ const schema = z.object({
 });
 
 export type EnvironmentConfig = z.infer<typeof schema> & {
+  llmProvider: "openai" | "anthropic";
   llmBaseUrl: string;
   llmModel: string;
+  llmApiKey: string;
   kbScope: string;
   kbSource: string;
 };
@@ -36,6 +44,7 @@ export type EnvironmentConfig = z.infer<typeof schema> & {
 export type EnvironmentDiagnostics = {
   nodeEnv: EnvironmentConfig["NODE_ENV"];
   llm: {
+    provider: "openai" | "anthropic";
     baseUrl: string;
     model: string;
     apiKeyConfigured: boolean;
@@ -61,10 +70,27 @@ export class EnvironmentManager {
       }
 
       const env = parsed.data;
+
+      // Determine provider and API key
+      const provider = env.LLM_PROVIDER ?? "openai";
+      let apiKey = env.LLM_API_KEY ?? "";
+
+      // If Anthropic provider is selected, try ANTHROPIC_API_KEY first
+      if (provider === "anthropic") {
+        apiKey = env.ANTHROPIC_API_KEY ?? env.LLM_API_KEY ?? "";
+      }
+
+      if (!apiKey) {
+        throw new Error("LLM_API_KEY or ANTHROPIC_API_KEY must be configured");
+      }
+
       EnvironmentManager.cached = {
         ...env,
+        LLM_API_KEY: apiKey,
+        llmProvider: provider,
         llmBaseUrl: env.LLM_BASE_URL ?? "https://api.openai.com/v1",
         llmModel: env.LLM_MODEL,
+        llmApiKey: apiKey,
         kbScope: env.KB_SCOPE,
         kbSource: env.KB_SOURCE,
       };
@@ -78,9 +104,10 @@ export class EnvironmentManager {
     return {
       nodeEnv: env.NODE_ENV,
       llm: {
+        provider: env.llmProvider,
         baseUrl: env.llmBaseUrl,
         model: env.llmModel,
-        apiKeyConfigured: Boolean(env.LLM_API_KEY?.length),
+        apiKeyConfigured: Boolean(env.llmApiKey?.length),
       },
       knowledgeBase: {
         scope: env.kbScope,
