@@ -40,8 +40,9 @@ describe("EnvironmentManager", () => {
 
   it("throws when required values missing", () => {
     delete process.env.LLM_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
     EnvironmentManager.reset();
-    expect(() => EnvironmentManager.load()).toThrowError(/LLM_API_KEY is required/);
+    expect(() => EnvironmentManager.load()).toThrowError(/LLM_API_KEY or ANTHROPIC_API_KEY must be configured/);
   });
 
   it("forces KB_SCOPE to pcm", () => {

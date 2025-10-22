@@ -4,6 +4,7 @@ import { createLogger } from "@/lib/log";
 import { EnvironmentManager } from "@/lib/managers/environment-manager";
 import { knowledgeBaseInitializer } from "@/lib/managers/knowledge-base-initializer";
 import { LLMClient } from "@/lib/managers/llm-client";
+import { LLMClientV2 } from "@/lib/managers/llm-client-v2";
 import { metrics } from "@/lib/managers/metrics-manager";
 import type { KBDoc } from "@/lib/retrieval";
 import { initializeKnowledgeBase } from "@/lib/retrieval";
